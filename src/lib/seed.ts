@@ -8,6 +8,7 @@ export function seed(db: DatabaseSync) {
     ["doctor", "นพ.ธนา ใจดี", "DOCTOR"],
     ["lab", "นางสาวพิมพ์ แล็บ", "LAB"],
     ["admin", "ผู้ดูแลระบบ", "ADMIN"],
+    ["lab2", "ทนพ.สมศักดิ์ ตรวจดี", "LAB"], // second medtech: verify must be done by someone else (four-eyes)
   ];
   const insUser = db.prepare("INSERT INTO users(username, name, role) VALUES (?, ?, ?)");
   for (const u of users) insUser.run(...u);

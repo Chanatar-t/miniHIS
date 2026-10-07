@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, audit } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
-import { SCHEME, ITEM_STATUS, age } from "@/lib/labels";
+import { SCHEME, ITEM_STATUS, FLAG, age } from "@/lib/labels";
 import { openVisit } from "../actions";
 
 type Patient = {
@@ -13,6 +13,7 @@ type Visit = { id: number; vn: string; scheme: string; created_at: string };
 type Item = {
   item_id: number; visit_id: number; order_id: number; priority: string; ordered_at: string; doctor: string;
   code: string; name: string; status: string; outlab: string | null; accession_no: string | null; shipment_no: string | null;
+  value: string | null; flag: string | null; unit: string | null;
 };
 
 export default async function PatientPage({ params }: PageProps<"/patients/[hn]">) {
@@ -28,7 +29,7 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
   const items = db
     .prepare(
       `SELECT o.visit_id, o.id AS order_id, o.priority, o.ordered_at, u.name AS doctor,
-              i.id AS item_id, t.code, t.name, i.status, ol.code AS outlab, s.accession_no, sh.shipment_no
+              i.id AS item_id, t.code, t.name, i.status, ol.code AS outlab, s.accession_no, sh.shipment_no, i.value, i.flag, t.unit
        FROM lab_orders o
        JOIN visits v ON v.id = o.visit_id
        JOIN users u ON u.id = o.ordered_by
@@ -103,7 +104,7 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
                     <th>Test</th>
                     <th>ส่งตรวจที่</th>
                     <th>Accession / Shipment</th>
-                    <th>สถานะ</th>
+                    <th>สถานะ / ผล</th>
                     <th>แพทย์</th>
                   </tr>
                 </thead>
@@ -111,7 +112,14 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
                   {its.map((i) => (
                     <tr key={i.item_id}>
                       <td className="font-mono text-xs">
-                        #{i.order_id} {i.priority === "STAT" && <b className="text-red-600">STAT</b>}
+                        {user.role === "DOCTOR" || user.role === "LAB" ? (
+                          <Link href={`/reports/${i.order_id}`} className="text-teal-700 hover:underline">
+                            #{i.order_id}
+                          </Link>
+                        ) : (
+                          `#${i.order_id}`
+                        )}{" "}
+                        {i.priority === "STAT" && <b className="text-red-600">STAT</b>}
                       </td>
                       <td>
                         <span className="font-mono">{i.code}</span> {i.name}
@@ -122,9 +130,19 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
                         {i.shipment_no && <div className="text-slate-500">{i.shipment_no}</div>}
                       </td>
                       <td>
-                        <span className={`rounded px-2 py-0.5 text-xs ${ITEM_STATUS[i.status].cls}`}>
-                          {ITEM_STATUS[i.status].label}
-                        </span>
+                        {/* value only once verified: unverified results are never shown to clinicians */}
+                        {i.status === "VERIFIED" ? (
+                          <span className="font-semibold">
+                            {i.value} <span className="text-xs font-normal text-slate-500">{i.unit}</span>{" "}
+                            {i.flag && i.flag !== "N" && (
+                              <span className={`rounded px-1.5 py-0.5 text-xs ${FLAG[i.flag].cls}`}>{FLAG[i.flag].label}</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className={`rounded px-2 py-0.5 text-xs ${ITEM_STATUS[i.status].cls}`}>
+                            {ITEM_STATUS[i.status].label}
+                          </span>
+                        )}
                       </td>
                       <td className="text-slate-500">{i.doctor}</td>
                     </tr>

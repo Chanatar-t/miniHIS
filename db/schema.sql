@@ -110,8 +110,9 @@ CREATE TABLE lab_order_items (
               CHECK (status IN ('ORDERED','COLLECTED','RECEIVED','SENT','RESULTED','VERIFIED','REJECTED','CANCELLED')),
   value       TEXT,
   flag        TEXT CHECK (flag IN ('LL','L','N','H','HH')),
-  resulted_by INTEGER REFERENCES users(id),  -- verifier must differ (four-eyes)
+  resulted_by INTEGER REFERENCES users(id),  -- verifier must differ (four-eyes); NULL = came from outlab HL7
   resulted_at TEXT,
+  message_id  INTEGER REFERENCES inbound_messages(id), -- which HL7 message delivered it
   verified_by INTEGER REFERENCES users(id),
   verified_at TEXT
 );

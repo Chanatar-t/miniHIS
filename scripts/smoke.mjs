@@ -38,7 +38,8 @@ const ok = (cond, msg) => {
 // ---- helpers
 const ck = (id) => `session=${id}.${createHmac("sha256", SECRET).update(String(id)).digest("hex")}`;
 const get = (p, c) => fetch(B + p, { headers: { cookie: c }, redirect: "manual" });
-const html = (p, c) => get(p, c).then((r) => r.text());
+// React splits adjacent text with <!-- --> markers; drop them so assertions can match plain text
+const html = (p, c) => get(p, c).then((r) => r.text()).then((t) => t.replaceAll("<!-- -->", ""));
 const forms = (h) => [...h.matchAll(/<form[^>]*>([\s\S]*?)<\/form>/g)].map((m) => m[1]);
 const hidden = (f, onlyActionFields = false) =>
   [...f.matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)]
@@ -160,6 +161,63 @@ async function main() {
   r = await post("/lab/collect", "session=3.forged", fakeCollect, { orderId: 2 }, true);
   ok(r.loc.endsWith("/login") && one("SELECT COUNT(*) n FROM specimens").n === before, "forged cookie -> /login");
   ok(one("SELECT COUNT(*) n FROM audit_log WHERE action = 'DENY'").n >= 2, "denied attempts are audited");
+
+  console.log("# results");
+  const lab2 = ck(5);
+  const decode = (s) => s.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", '"').replaceAll("&#x27;", "'").replaceAll("&amp;", "&");
+  let resPage = await html("/lab/results", lab);
+  ok([1, 2, 3, 4].every((i) => resPage.includes(`name="value_${i}"`)), "worklist: 3 outlab SENT + in-house CREA");
+  const creaForm = forms(resPage).find((f) => f.includes('name="value_4"'));
+  r = await post("/lab/results", lab, creaForm, { value_4: "12" });
+  const crea = one("SELECT status, flag, resulted_by FROM lab_order_items WHERE id = 4");
+  ok(r.loc.includes("msg=") && crea.status === "RESULTED" && crea.flag === "HH" && crea.resulted_by === 3, "manual CREA=12 -> HH critical");
+  r = await post("/lab/results", lab, creaForm, { value_4: "13" }); // stale form
+  ok(r.loc.includes("err=") && one("SELECT value FROM lab_order_items WHERE id = 4").value === "12", "re-submit stale result form -> error, value kept");
+
+  const textarea = (h) => decode(h.match(/<textarea[^>]*>([\s\S]*?)<\/textarea>/)?.[1] ?? "");
+  const oru = textarea(await html("/lab/results?sample=OUT-A", lab));
+  ok(oru.startsWith("MSH|^~\\&|OUT-A") && (oru.match(/OBX/g) || []).length === 3, "sample ORU generated for 3 sent tests");
+  const importForm = forms(resPage).find((f) => f.includes('name="raw"'));
+  r = await post("/lab/results", lab, importForm, { raw: oru });
+  ok(r.loc.includes("msg=") && r.loc.includes("3 ผล"), "import HL7: " + r.loc.split("msg=")[1]);
+  const tsh = one("SELECT status, flag, resulted_by, message_id FROM lab_order_items WHERE id = 1");
+  ok(tsh.status === "RESULTED" && tsh.flag === "H" && tsh.resulted_by === null && tsh.message_id, "TSH from HL7: RESULTED, flagged H by our range, source recorded");
+  r = await post("/lab/results", lab, importForm, { raw: oru });
+  ok(r.loc.includes("เคย import แล้ว"), "same message again -> idempotent, rejected");
+  const spoof = oru.replace("|OUT-A|OUT-A|", "|OUT-B|OUT-B|").replace(/\|ORU\^R01\|[^|]+\|/, "|ORU^R01|SPOOF1|");
+  r = await post("/lab/results", lab, importForm, { raw: spoof });
+  ok(r.loc.includes("err=") && !one("SELECT 1 x FROM inbound_messages WHERE control_id = 'SPOOF1'"), "OUT-B cannot post OUT-A results; nothing stored");
+  r = await post("/lab/results", lab, importForm, { raw: "hello" });
+  ok(r.loc.includes("HL7 ไม่ถูกต้อง"), "garbage HL7 -> error");
+
+  console.log("# verify (four-eyes, critical)");
+  const verifyPage = await html("/lab/verify", lab);
+  ok(verifyPage.includes("four-eyes") && !forms(verifyPage).some((f) => f.includes("Verify และรายงานผล")), "own result: no verify button for lab");
+  const verifyForm = forms(await html("/lab/verify", lab2)).find((f) => f.includes('name="itemId"'));
+  r = await post("/lab/verify", lab, verifyForm, { notifiedTo: "x", method: "โทรศัพท์" });
+  ok(r.loc.includes("four-eyes") && itemStatus(4) === "RESULTED", "lab verifying own CREA -> blocked");
+  r = await post("/lab/verify", lab2, verifyForm, { method: "โทรศัพท์" });
+  ok(r.loc.includes("ค่าวิกฤต") && itemStatus(4) === "RESULTED", "critical without notification -> blocked");
+  r = await post("/lab/verify", lab2, verifyForm, { notifiedTo: "นพ.ธนา", method: "โทรศัพท์" });
+  ok([1, 2, 3, 4].every((i) => itemStatus(i) === "VERIFIED"), "lab2 verifies order 1");
+  ok(one("SELECT COUNT(*) n FROM critical_notifications WHERE item_id = 4 AND notified_to = 'นพ.ธนา'").n === 1, "critical call logged");
+  r = await post("/lab/verify", lab2, verifyForm, { notifiedTo: "x", method: "โทรศัพท์" });
+  ok(r.loc.includes("err="), "verify twice -> error");
+
+  console.log("# report & amend");
+  const pt = await html("/patients/HN0000031", doc);
+  ok(pt.includes("HH วิกฤต") && pt.includes('href="/reports/1"'), "doctor sees verified critical result + report link");
+  const rep = await html("/reports/1", doc);
+  ok(rep.includes("แจ้ง นพ.ธนา ทางโทรศัพท์") && rep.includes("LOINC 3016-3"), "report shows critical notification and LOINC");
+  ok(one("SELECT COUNT(*) n FROM audit_log WHERE action = 'VIEW' AND entity = 'lab_report'").n >= 1, "report view audited");
+  const amendForm = forms(await html("/reports/1", lab2)).find((f) => f.includes('name="itemId" value="1"'));
+  r = await post("/reports/1", lab2, amendForm, { value: "2.1", reason: "" });
+  ok(r.loc.includes("เหตุผล"), "amend without reason -> blocked");
+  const oldTsh = one("SELECT value FROM lab_order_items WHERE id = 1").value;
+  r = await post("/reports/1", lab2, amendForm, { value: "2.1", reason: "outlab แจ้งแก้ผล" });
+  const am = one("SELECT old_value, new_value FROM result_amendments WHERE item_id = 1");
+  ok(am?.old_value === oldTsh && am.new_value === "2.1" && one("SELECT flag FROM lab_order_items WHERE id = 1").flag === "N", `amend TSH ${oldTsh} -> 2.1, old kept, re-flagged N`);
+  ok((await get("/reports/1", clerk)).headers.get("location")?.endsWith("/forbidden"), "clerk cannot open lab report");
 
   console.log("# not found");
   g = await get("/patients/HN9999999", doc);

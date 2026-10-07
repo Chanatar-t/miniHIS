@@ -16,6 +16,18 @@ export const ITEM_STATUS: Record<string, { label: string; cls: string }> = {
   CANCELLED: { label: "ยกเลิก", cls: "bg-slate-100 text-slate-400 line-through" },
 };
 
+export const FLAG: Record<string, { label: string; cls: string }> = {
+  LL: { label: "LL วิกฤต", cls: "bg-red-600 text-white font-bold" },
+  HH: { label: "HH วิกฤต", cls: "bg-red-600 text-white font-bold" },
+  L: { label: "L", cls: "bg-sky-100 text-sky-800 font-semibold" },
+  H: { label: "H", cls: "bg-amber-100 text-amber-800 font-semibold" },
+  N: { label: "", cls: "" },
+};
+export const isCritical = (flag: string | null) => flag === "LL" || flag === "HH";
+
+export const refRange = (lo: number | null, hi: number | null) =>
+  lo != null && hi != null ? `${lo} - ${hi}` : hi != null ? `< ${hi}` : lo != null ? `> ${lo}` : "";
+
 export const REJECT_REASONS = [
   "Hemolyzed",
   "Clotted",
