@@ -16,6 +16,15 @@ export const ITEM_STATUS: Record<string, { label: string; cls: string }> = {
   CANCELLED: { label: "ยกเลิก", cls: "bg-slate-100 text-slate-400 line-through" },
 };
 
+export const REJECT_REASONS = [
+  "Hemolyzed",
+  "Clotted",
+  "QNS (ปริมาณไม่พอ)",
+  "ติดฉลากผิด/ไม่มีฉลาก",
+  "เกินเวลาที่กำหนด",
+  "สูญหายระหว่างขนส่ง",
+] as const;
+
 export function age(dob: string, at = new Date()) {
   const d = new Date(dob);
   let y = at.getFullYear() - d.getFullYear();

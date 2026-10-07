@@ -4,7 +4,7 @@ import path from "node:path";
 import { seed } from "./seed";
 
 // ponytail: SQLite file DB, single process. Swap to Postgres when it needs multiple app servers.
-const DB_FILE = path.join(process.cwd(), "data", "his.db");
+const DB_FILE = process.env.DB_FILE ?? path.join(process.cwd(), "data", "his.db");
 
 function open(): DatabaseSync {
   mkdirSync(path.dirname(DB_FILE), { recursive: true });
@@ -50,11 +50,14 @@ const yymmdd = (t = new Date()) => `${pad(t.getFullYear() % 100)}${pad(t.getMont
 
 export const newHn = (d: DatabaseSync) => `HN${pad(nextNumber(d, "HN"), 7)}`;
 
-// daily running: VN2610070001
-export function newVn(d: DatabaseSync) {
+// daily running number, e.g. VN2610070001
+function dailyNo(d: DatabaseSync, prefix: string, width: number) {
   const day = yymmdd();
-  return `VN${day}${pad(nextNumber(d, `VN-${day}`), 4)}`;
+  return `${prefix}${day}${pad(nextNumber(d, `${prefix}-${day}`), width)}`;
 }
+export const newVn = (d: DatabaseSync) => dailyNo(d, "VN", 4);
+export const newAccession = (d: DatabaseSync) => dailyNo(d, "L", 4); // printed as Code128 on the tube
+export const newShipmentNo = (d: DatabaseSync) => dailyNo(d, "SH", 3);
 
 export function audit(
   d: DatabaseSync,

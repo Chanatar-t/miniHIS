@@ -18,6 +18,9 @@ export const metadata: Metadata = {
 
 const NAV: { href: string; label: string; roles: Role[] }[] = [
   { href: "/patients", label: "ผู้ป่วย", roles: ["CLERK", "DOCTOR", "LAB", "ADMIN"] },
+  { href: "/lab/collect", label: "เก็บสิ่งส่งตรวจ", roles: ["LAB"] },
+  { href: "/lab/receive", label: "รับเข้า Lab", roles: ["LAB"] },
+  { href: "/lab/shipments", label: "ส่ง Outlab", roles: ["LAB"] },
 ];
 
 async function signOut() {

@@ -11,8 +11,8 @@ type Patient = {
 };
 type Visit = { id: number; vn: string; scheme: string; created_at: string };
 type Item = {
-  visit_id: number; order_id: number; priority: string; ordered_at: string; doctor: string;
-  code: string; name: string; status: string; outlab: string | null;
+  item_id: number; visit_id: number; order_id: number; priority: string; ordered_at: string; doctor: string;
+  code: string; name: string; status: string; outlab: string | null; accession_no: string | null; shipment_no: string | null;
 };
 
 export default async function PatientPage({ params }: PageProps<"/patients/[hn]">) {
@@ -28,14 +28,16 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
   const items = db
     .prepare(
       `SELECT o.visit_id, o.id AS order_id, o.priority, o.ordered_at, u.name AS doctor,
-              t.code, t.name, i.status, ol.code AS outlab
+              i.id AS item_id, t.code, t.name, i.status, ol.code AS outlab, s.accession_no, sh.shipment_no
        FROM lab_orders o
        JOIN visits v ON v.id = o.visit_id
        JOIN users u ON u.id = o.ordered_by
        JOIN lab_order_items i ON i.order_id = o.id
        JOIN lab_tests t ON t.id = i.test_id
        LEFT JOIN outlabs ol ON ol.id = t.outlab_id
-       WHERE v.patient_id = ? ORDER BY o.id DESC, t.code`,
+       LEFT JOIN specimens s ON s.id = i.specimen_id
+       LEFT JOIN shipments sh ON sh.id = s.shipment_id
+       WHERE v.patient_id = ? ORDER BY o.id DESC, i.id`,
     )
     .all(p.id) as Item[];
 
@@ -100,13 +102,14 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
                     <th>Order</th>
                     <th>Test</th>
                     <th>ส่งตรวจที่</th>
+                    <th>Accession / Shipment</th>
                     <th>สถานะ</th>
                     <th>แพทย์</th>
                   </tr>
                 </thead>
                 <tbody>
                   {its.map((i) => (
-                    <tr key={`${i.order_id}-${i.code}`}>
+                    <tr key={i.item_id}>
                       <td className="font-mono text-xs">
                         #{i.order_id} {i.priority === "STAT" && <b className="text-red-600">STAT</b>}
                       </td>
@@ -114,6 +117,10 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
                         <span className="font-mono">{i.code}</span> {i.name}
                       </td>
                       <td>{i.outlab ?? "ในโรงพยาบาล"}</td>
+                      <td className="font-mono text-xs">
+                        {i.accession_no ?? "-"}
+                        {i.shipment_no && <div className="text-slate-500">{i.shipment_no}</div>}
+                      </td>
                       <td>
                         <span className={`rounded px-2 py-0.5 text-xs ${ITEM_STATUS[i.status].cls}`}>
                           {ITEM_STATUS[i.status].label}
