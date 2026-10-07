@@ -2,11 +2,12 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { createShipment } from "../actions";
+import { Flash } from "@/components/flash";
 
 type Pending = { id: number; code: string; name: string; pending: number; stat: number };
 type Shipment = { shipment_no: string; outlab: string; status: string; created_at: string; sent_at: string | null; n: number };
 
-export default async function ShipmentsPage() {
+export default async function ShipmentsPage({ searchParams }: PageProps<"/lab/shipments">) {
   await requireRole("LAB");
   const pending = db
     .prepare(
@@ -31,6 +32,7 @@ export default async function ShipmentsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">ส่งตรวจ Outlab</h1>
+      <Flash sp={await searchParams} />
       <div className="grid gap-4 md:grid-cols-2">
         {pending.map((p) => (
           <div key={p.id} className="card flex items-center gap-4">

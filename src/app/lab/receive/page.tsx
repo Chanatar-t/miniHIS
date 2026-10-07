@@ -37,12 +37,13 @@ export default async function ReceivePage({ searchParams }: PageProps<"/lab/rece
       <Flash sp={sp} />
 
       <Section title={`รอรับเข้า (${waiting.length})`} rows={waiting} />
-      <Section title={`รับเข้าวันนี้ (${received.length})`} rows={received} canReject />
+      <Section title={`รับเข้าวันนี้ (${received.length})`} rows={received} />
     </div>
   );
 }
 
-function Section({ title, rows, canReject }: { title: string; rows: S[]; canReject?: boolean }) {
+// Reject is allowed in both lists: hemolysis is usually spotted right at the counter
+function Section({ title, rows }: { title: string; rows: S[] }) {
   return (
     <div className="card p-0">
       <h2 className="px-3 pt-3 font-semibold">{title}</h2>
@@ -54,8 +55,8 @@ function Section({ title, rows, canReject }: { title: string; rows: S[]; canReje
             <th>Tests</th>
             <th>หลอด</th>
             <th>ปลายทาง</th>
-            <th>{canReject ? "รับเข้าเมื่อ" : "เก็บเมื่อ"}</th>
-            {canReject && <th />}
+            <th>เวลา</th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -70,24 +71,22 @@ function Section({ title, rows, canReject }: { title: string; rows: S[]; canReje
               <td className="text-xs">{s.tests}</td>
               <td className="text-xs">{s.container}</td>
               <td>{s.outlab ?? "In-house"}</td>
-              <td className="text-xs">{(canReject ? s.received_at : s.collected_at)?.slice(11, 16)}</td>
-              {canReject && (
-                <td>
-                  {s.shipment_id ? (
-                    <span className="text-xs text-slate-400">อยู่ใน shipment</span>
-                  ) : (
-                    <form action={rejectSpecimen} className="flex gap-1">
-                      <input type="hidden" name="specimenId" value={s.id} />
-                      <select name="reason" className="input py-1 text-xs" aria-label="เหตุผล reject">
-                        {REJECT_REASONS.map((r) => (
-                          <option key={r}>{r}</option>
-                        ))}
-                      </select>
-                      <button className="btn-ghost text-xs text-red-700">Reject</button>
-                    </form>
-                  )}
-                </td>
-              )}
+              <td className="text-xs">{(s.received_at ?? s.collected_at).slice(11, 16)}</td>
+              <td>
+                {s.shipment_id ? (
+                  <span className="text-xs text-slate-400">อยู่ในใบนำส่ง</span>
+                ) : (
+                  <form action={rejectSpecimen} className="flex gap-1">
+                    <input type="hidden" name="specimenId" value={s.id} />
+                    <select name="reason" className="input py-1 text-xs" aria-label="เหตุผล reject">
+                      {REJECT_REASONS.map((r) => (
+                        <option key={r}>{r}</option>
+                      ))}
+                    </select>
+                    <button className="btn-ghost text-xs text-red-700">Reject</button>
+                  </form>
+                )}
+              </td>
             </tr>
           ))}
           {rows.length === 0 && (

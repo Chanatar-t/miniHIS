@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { db } from "./db";
+import { db, audit } from "./db";
 
 export type Role = "CLERK" | "DOCTOR" | "LAB" | "ADMIN";
 export type User = { id: number; username: string; name: string; role: Role };
@@ -41,7 +41,8 @@ export async function requireRole(...roles: Role[]): Promise<User> {
   const user = await currentUser();
   if (!user) redirect("/login");
   if (roles.length && !roles.includes(user.role)) {
-    throw new Error(`Forbidden: ${user.role} cannot do this`);
+    audit(db, user.id, "DENY", "role", null, `${user.role} needs ${roles.join("|")}`);
+    redirect("/forbidden");
   }
   return user;
 }

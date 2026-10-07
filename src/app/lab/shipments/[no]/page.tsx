@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { age } from "@/lib/labels";
 import { PrintButton } from "@/components/client";
+import { Flash } from "@/components/flash";
 import { sendShipment, removeFromShipment } from "../../actions";
 
 type Sh = { id: number; shipment_no: string; status: string; created_at: string; sent_at: string | null; outlab: string; outlab_name: string; created_by: string };
@@ -11,7 +12,7 @@ type Line = {
   hn: string; patient: string; sex: string; dob: string; priority: string; tests: string;
 };
 
-export default async function ManifestPage({ params }: PageProps<"/lab/shipments/[no]">) {
+export default async function ManifestPage({ params, searchParams }: PageProps<"/lab/shipments/[no]">) {
   await requireRole("LAB");
   const { no } = await params;
   const sh = db
@@ -38,11 +39,14 @@ export default async function ManifestPage({ params }: PageProps<"/lab/shipments
 
   return (
     <div className="space-y-4">
+      <div className="no-print">
+        <Flash sp={await searchParams} />
+      </div>
       <div className="no-print flex items-center gap-2">
         <PrintButton label="พิมพ์ใบนำส่ง" />
-        {draft && (
+        {draft && lines.length > 0 && (
           <form action={sendShipment}>
-            <input type="hidden" name="shipmentId" value={sh.id} />
+            <input type="hidden" name="shipmentNo" value={sh.shipment_no} />
             <button className="btn bg-violet-700 hover:bg-violet-800">ยืนยันส่ง (ส่งมอบให้ผู้รับแล้ว)</button>
           </form>
         )}
@@ -97,6 +101,7 @@ export default async function ManifestPage({ params }: PageProps<"/lab/shipments
                 {draft && (
                   <td className="no-print">
                     <form action={removeFromShipment}>
+                      <input type="hidden" name="shipmentNo" value={sh.shipment_no} />
                       <input type="hidden" name="specimenId" value={l.id} />
                       <button className="text-xs text-slate-400 hover:text-red-600">เอาออก</button>
                     </form>

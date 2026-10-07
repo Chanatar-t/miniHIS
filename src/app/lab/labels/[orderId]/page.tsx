@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { Barcode, PrintButton } from "@/components/client";
@@ -23,6 +24,7 @@ export default async function LabelsPage({ params }: PageProps<"/lab/labels/[ord
        GROUP BY s.id ORDER BY s.id`,
     )
     .all(Number(orderId)) as Tube[];
+  if (tubes.length === 0) notFound();
 
   return (
     <div className="space-y-4">
