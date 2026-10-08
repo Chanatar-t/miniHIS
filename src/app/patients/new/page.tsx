@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/patient";
 import { requireRole } from "@/lib/auth";
 import { PatientForm } from "./form";
 
@@ -10,9 +10,7 @@ export default async function NewPatientPage({ searchParams }: PageProps<"/patie
   const initial = { cid: String(sp.cid ?? ""), first_name, last_name: rest.join(" ") };
   return (
     <div className="mx-auto max-w-xl space-y-4">
-      <Link href="/patients" className="text-sm text-slate-500 hover:text-teal-700">
-        ← กลับไปค้นหา
-      </Link>
+      <BackLink href="/patients">รายชื่อผู้ป่วย</BackLink>
       <h1 className="text-2xl font-semibold">ลงทะเบียนผู้ป่วยใหม่</h1>
       <p className="text-sm text-slate-500">บันทึกแล้วจะได้ HN ทันที และเปิด Visit ต่อได้ในหน้าถัดไป</p>
       <PatientForm initial={initial} />

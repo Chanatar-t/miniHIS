@@ -1,5 +1,5 @@
+import { BackLink } from "@/components/patient";
 import { LabSteps } from "../../steps";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -29,13 +29,11 @@ export default async function LabelsPage({ params }: PageProps<"/lab/labels/[ord
 
   return (
     <div className="space-y-4">
+      <BackLink href="/lab/collect">กลับไปหน้ารอเก็บ</BackLink>
       <LabSteps current="collect" />
       <div className="no-print flex items-center gap-3">
         <h1 className="text-xl font-semibold">ฉลากหลอดเลือด · Order #{orderId}</h1>
         <PrintButton label="พิมพ์ฉลาก" />
-        <Link href="/lab/collect" className="btn-ghost">
-          กลับไปหน้ารอเก็บ
-        </Link>
       </div>
       <p className="no-print text-sm text-slate-500">
         ระบบแยกหลอดให้อัตโนมัติ: test ที่ใช้หลอดชนิดเดียวกันและส่งไปที่เดียวกันจะรวมเป็นหลอดเดียว ({tubes.length} หลอด)

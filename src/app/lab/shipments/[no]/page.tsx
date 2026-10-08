@@ -1,3 +1,4 @@
+import { BackLink } from "@/components/patient";
 import { LabSteps } from "../../steps";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -40,6 +41,7 @@ export default async function ManifestPage({ params, searchParams }: PageProps<"
 
   return (
     <div className="space-y-4">
+      <BackLink href="/lab/shipments">รายการใบนำส่ง</BackLink>
       <LabSteps current="ship" />
       <div className="no-print">
         <Flash sp={await searchParams} />

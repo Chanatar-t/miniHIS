@@ -1,3 +1,4 @@
+import { BackLink } from "@/components/patient";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -42,6 +43,7 @@ export default async function OrderPage({ params }: PageProps<"/visits/[vn]/orde
 
   return (
     <div className="space-y-4">
+      <BackLink href={`/patients/${v.hn}`}>กลับไปหน้าผู้ป่วย</BackLink>
       <div className="card flex flex-wrap items-center gap-x-6 text-sm">
         <span className="font-mono font-semibold">{v.hn}</span>
         <span className="font-semibold">

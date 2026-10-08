@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { SCHEME, ITEM_STATUS, ORDER_STATUS, VISIT_STATUS, FLAG, age, thDate, queueNo } from "@/lib/labels";
 import { orderStatus } from "@/lib/rules";
 import { todayVisits } from "@/lib/visits";
-import { Avatar, fullName } from "@/components/patient";
+import { Avatar, BackLink, fullName } from "@/components/patient";
 import { openVisit } from "../actions";
 import { AiSummaryCard } from "./ai-card";
 
@@ -58,9 +58,7 @@ export default async function PatientPage({ params, searchParams }: PageProps<"/
 
   return (
     <div className="space-y-5">
-      <Link href="/patients" className="text-sm text-slate-500 hover:text-teal-700">
-        ← ค้นหาผู้ป่วย / Visit วันนี้
-      </Link>
+      <BackLink href="/patients">รายชื่อผู้ป่วย</BackLink>
 
       {sp.registered && (
         <p className="rounded-lg bg-emerald-50 px-4 py-3 text-emerald-900">

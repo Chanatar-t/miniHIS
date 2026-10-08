@@ -1,3 +1,4 @@
+import { BackLink } from "@/components/patient";
 import { notFound } from "next/navigation";
 import { db, audit } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -58,6 +59,7 @@ export default async function ReportPage({ params, searchParams }: PageProps<"/r
 
   return (
     <div className="space-y-4">
+      <BackLink href={`/patients/${h.hn}`}>กลับไปหน้าผู้ป่วย</BackLink>
       <div className="no-print flex items-center gap-2">
         <PrintButton label="พิมพ์ใบรายงานผล" />
         <div className="flex-1">
