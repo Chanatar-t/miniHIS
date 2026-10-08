@@ -1,5 +1,30 @@
 import { db } from "./db";
-import { orderStatus } from "./rules";
+import { orderStatus, withPrevious } from "./rules";
+
+// All tests of one visit (every order), with last time's verified value for comparison.
+export function visitResults(visitId: number, patientId: number) {
+  const rows = db
+    .prepare(
+      `SELECT i.id AS item_id, i.test_id, o.visit_id, v.created_at AS visit_at, t.code, t.name, i.status, i.value, i.flag, t.unit, t.ref_low, t.ref_high,
+              ol.code AS outlab, EXISTS (SELECT 1 FROM result_amendments a WHERE a.item_id = i.id) AS amended
+       FROM lab_order_items i JOIN lab_orders o ON o.id = i.order_id JOIN visits v ON v.id = o.visit_id JOIN lab_tests t ON t.id = i.test_id
+       LEFT JOIN outlabs ol ON ol.id = t.outlab_id
+       WHERE o.visit_id = ? AND i.status NOT IN ('REJECTED','CANCELLED')
+       ORDER BY t.outlab_id IS NOT NULL, t.code`,
+    )
+    .all(visitId) as {
+    item_id: number; test_id: number; visit_id: number; visit_at: string; code: string; name: string; status: string; value: string | null;
+    flag: string | null; unit: string | null; ref_low: number | null; ref_high: number | null; outlab: string | null; amended: number;
+  }[];
+  const history = db
+    .prepare(
+      `SELECT i.test_id, o.visit_id, v.created_at AS visit_at, i.value, date(coalesce(i.verified_at, o.ordered_at)) AS date
+       FROM lab_order_items i JOIN lab_orders o ON o.id = i.order_id JOIN visits v ON v.id = o.visit_id
+       WHERE v.patient_id = ? AND i.status = 'VERIFIED'`,
+    )
+    .all(patientId) as { test_id: number; visit_id: number; visit_at: string; value: string; date: string }[];
+  return withPrevious(rows.map((r) => ({ ...r })), history);
+}
 
 export type TodayVisit = {
   id: number; vn: string; scheme: string; created_at: string; patient_id: number;

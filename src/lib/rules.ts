@@ -45,6 +45,20 @@ export function orderStatus(itemStatuses: string[]): OrderStatus {
   return "IN_PROGRESS";
 }
 
+// For each result, the most recent verified value of the same test from an EARLIER visit.
+// Compared by visit time, not id: back-entered / migrated visits get later ids than newer ones.
+// visit_at: "YYYY-MM-DD HH:MM:SS" (sorts as text). history order does not matter.
+export function withPrevious<T extends { test_id: number; visit_id: number; visit_at: string }>(
+  rows: T[],
+  history: { test_id: number; visit_id: number; visit_at: string; value: string; date: string }[],
+): (T & { prev: { value: string; date: string } | null })[] {
+  return rows.map((r) => {
+    const earlier = history.filter((h) => h.test_id === r.test_id && h.visit_id !== r.visit_id && h.visit_at < r.visit_at);
+    const p = earlier.reduce<(typeof history)[number] | undefined>((best, h) => (!best || h.visit_at >= best.visit_at ? h : best), undefined);
+    return { ...r, prev: p ? { value: p.value, date: p.date } : null };
+  });
+}
+
 // AI guardrail: numbers in the generated text that never appear in the source data (hallucinated values).
 // Compares numerically so "7.20" matches "7.2".
 export function ungroundedNumbers(output: string, source: string): string[] {

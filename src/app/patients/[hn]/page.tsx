@@ -4,7 +4,8 @@ import { db, audit } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { SCHEME, ITEM_STATUS, ORDER_STATUS, VISIT_STATUS, FLAG, age, thDate, queueNo } from "@/lib/labels";
 import { orderStatus } from "@/lib/rules";
-import { todayVisits } from "@/lib/visits";
+import { todayVisits, visitResults } from "@/lib/visits";
+import { ResultsTable } from "@/components/results-table";
 import { Avatar, BackLink, fullName } from "@/components/patient";
 import { openVisit } from "../actions";
 import { AiSummaryCard } from "./ai-card";
@@ -28,7 +29,7 @@ export default async function PatientPage({ params, searchParams }: PageProps<"/
   if (!p) notFound();
   audit(db, user.id, "VIEW", "patient", p.id); // PDPA: who looked at whom
 
-  const visits = db.prepare("SELECT id, vn, scheme, created_at FROM visits WHERE patient_id = ? ORDER BY id DESC").all(p.id) as Visit[];
+  const visits = db.prepare("SELECT id, vn, scheme, created_at FROM visits WHERE patient_id = ? ORDER BY created_at DESC, id DESC").all(p.id) as Visit[];
   // least privilege: the front desk sees visits, not lab results
   const seesLab = user.role === "DOCTOR" || user.role === "LAB";
   const items = seesLab
@@ -55,6 +56,9 @@ export default async function PatientPage({ params, searchParams }: PageProps<"/
     ).map((r) => [r.visit_id, r.n]),
   );
   const today = todayVisits(p.id)[0];
+  // "this time" = the most recent visit that has lab orders (usually today's)
+  const current = seesLab ? visits.find((v) => (testCount.get(v.id) ?? 0) > 0) : undefined;
+  const currentRows = current ? visitResults(current.id, p.id) : [];
 
   return (
     <div className="space-y-5">
@@ -143,7 +147,37 @@ export default async function PatientPage({ params, searchParams }: PageProps<"/
         </section>
       </div>
 
-      {user.role === "DOCTOR" && <AiSummaryCard patientId={p.id} />}
+      {/* the real values first: the doctor reads these; AI below is optional */}
+      {current && (
+        <section className="card space-y-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="text-lg font-semibold">ผลตรวจครั้งนี้</h2>
+            <span className="text-sm text-slate-500">
+              {current.vn === today?.vn ? "Visit วันนี้" : thDate(current.created_at)} · {currentRows.filter((r) => r.status === "VERIFIED").length}/
+              {currentRows.length} รายการรายงานแล้ว
+            </span>
+            <Link href={`/visits/${current.vn}/report`} className="btn-ghost ml-auto">
+              🖨 ใบรายงานผล Visit นี้
+            </Link>
+          </div>
+          <ResultsTable rows={currentRows} />
+          <p className="text-xs text-slate-500">แสดงตัวเลขเฉพาะผลที่ตรวจทานแล้ว · ↑↓ เทียบกับผลครั้งก่อนของ test เดียวกัน</p>
+        </section>
+      )}
+
+      {user.role === "DOCTOR" && (
+        <details className="group rounded-lg border border-dashed border-violet-300 bg-violet-50/40">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm">
+            <span className="inline-block text-violet-600 transition group-open:rotate-90">▸</span>
+            <span className="font-medium text-violet-900">ตัวช่วยสรุปด้วย AI</span>
+            <span className="rounded bg-white px-1.5 py-0.5 text-xs text-violet-700 ring-1 ring-violet-200">ไม่บังคับ</span>
+            <span className="text-xs text-slate-500">AI อาจผิดพลาด ใช้ตารางผลด้านบนเป็นหลักเสมอ</span>
+          </summary>
+          <div className="px-4 pb-4">
+            <AiSummaryCard patientId={p.id} />
+          </div>
+        </details>
+      )}
 
       <section className="stagger space-y-3">
         <h2 className="text-lg font-semibold">ประวัติการมารับบริการ</h2>
@@ -159,6 +193,11 @@ export default async function PatientPage({ params, searchParams }: PageProps<"/
                 </span>
                 <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs">{SCHEME[v.scheme]}</span>
                 <span className="ml-auto text-sm text-slate-500">ตรวจ Lab {testCount.get(v.id) ?? 0} รายการ</span>
+                {seesLab && (testCount.get(v.id) ?? 0) > 0 && (
+                  <Link href={`/visits/${v.vn}/report`} className="text-sm font-medium text-teal-700 hover:underline">
+                    ใบรายงาน Visit นี้ →
+                  </Link>
+                )}
               </header>
               {orders.map((its) => {
                 const o = its[0];

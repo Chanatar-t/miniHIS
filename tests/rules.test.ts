@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { flagResult, isValidCid, cidCheckDigit, groupIntoTubes, ungroundedNumbers, orderStatus } from "../src/lib/rules.ts";
+import { flagResult, isValidCid, cidCheckDigit, groupIntoTubes, ungroundedNumbers, orderStatus, withPrevious } from "../src/lib/rules.ts";
 
 const glucose = { ref_low: 70, ref_high: 100, crit_low: 40, crit_high: 500 };
 
@@ -42,6 +42,29 @@ test("orderStatus", () => {
   assert.equal(orderStatus(["VERIFIED", "REJECTED"]), "COMPLETE"); // rejected tube, its re-collect already verified
   assert.equal(orderStatus(["REJECTED", "ORDERED"]), "WAITING"); // waiting for re-collection
   assert.equal(orderStatus(["CANCELLED"]), "CANCELLED");
+});
+
+test("withPrevious", () => {
+  // visit 9 was back-entered later (higher id) but happened in May: ordering must follow visit time, not id
+  const history = [
+    { test_id: 3, visit_id: 1, visit_at: "2026-01-10 09:00:00", value: "6.1", date: "2026-01-10" },
+    { test_id: 3, visit_id: 9, visit_at: "2026-05-10 09:00:00", value: "6.8", date: "2026-05-10" },
+    { test_id: 3, visit_id: 3, visit_at: "2026-10-08 09:00:00", value: "7.2", date: "2026-10-08" }, // same visit: not "previous"
+    { test_id: 4, visit_id: 1, visit_at: "2026-01-10 09:00:00", value: "2.0", date: "2026-01-10" },
+  ];
+  const out = withPrevious(
+    [
+      { test_id: 3, visit_id: 3, visit_at: "2026-10-08 09:00:00" },
+      { test_id: 4, visit_id: 1, visit_at: "2026-01-10 09:00:00" },
+      { test_id: 9, visit_id: 3, visit_at: "2026-10-08 09:00:00" },
+      { test_id: 3, visit_id: 9, visit_at: "2026-05-10 09:00:00" },
+    ],
+    history,
+  );
+  assert.deepEqual(out[0].prev, { value: "6.8", date: "2026-05-10" }); // latest earlier visit, despite its higher id
+  assert.equal(out[1].prev, null); // first time
+  assert.equal(out[2].prev, null); // never done
+  assert.deepEqual(out[3].prev, { value: "6.1", date: "2026-01-10" }); // October is later, not previous
 });
 
 test("isValidCid", () => {

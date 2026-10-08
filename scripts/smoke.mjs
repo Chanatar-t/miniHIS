@@ -265,6 +265,17 @@ async function main() {
   ok(am?.old_value === oldTsh && am.new_value === "2.1" && one("SELECT flag FROM lab_order_items WHERE id = 1").flag === "N", `amend TSH ${oldTsh} -> 2.1, old kept, re-flagged N`);
   ok((await get("/reports/1", clerk)).headers.get("location")?.endsWith("/forbidden"), "clerk cannot open lab report");
 
+  console.log("# results first, AI optional");
+  const docPt = await html("/patients/HN0000031", doc);
+  const resultsAt = docPt.indexOf("ผลตรวจครั้งนี้"), aiAt = docPt.indexOf("ตัวช่วยสรุปด้วย AI");
+  ok(resultsAt > 0 && aiAt > resultsAt && docPt.includes("ไม่บังคับ"), "patient page: real results come first, AI is below and marked optional");
+  ok(/<details[^>]*>[\s\S]*ตัวช่วยสรุปด้วย AI/.test(docPt) && !/<details[^>]*open/.test(docPt.slice(aiAt - 400, aiAt)), "AI helper is collapsed by default");
+  ok(docPt.includes(`/visits/${vn}/report`) && docPt.includes("4/5") && docPt.includes(">2.1<"), "this-visit table shows verified values and links to the visit report");
+  const vrep = await html(`/visits/${vn}/report`, doc);
+  ok(vrep.includes("รายงานแล้ว 4/5") && vrep.includes("HH วิกฤต") && vrep.includes("(แก้ไข)") && vrep.includes("แจ้ง นพ.ธนา"), "visit report: all orders, flags, amendment mark, critical call log");
+  ok(!vrep.includes(">12.6<") && vrep.includes("12.6 → 2.1"), "visit report shows the amended value, old value only in history");
+  ok((await get(`/visits/${vn}/report`, clerk)).headers.get("location")?.endsWith("/forbidden"), "clerk cannot open the visit report");
+
   console.log("# AI summary & audit");
   const aiForm = forms(await html("/patients/HN0000031", doc)).find((f) => f.includes("สรุปด้วย AI"));
   ok(aiForm, "doctor sees AI summary button");
