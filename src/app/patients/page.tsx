@@ -1,81 +1,152 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
+import { SCHEME, age, queueNo } from "@/lib/labels";
+import { todayVisits } from "@/lib/visits";
+import { LiveSearch } from "@/components/client";
+import { Avatar, TodayList, fullName } from "@/components/patient";
+import { openVisit } from "./actions";
 
-type Row = { hn: string; cid: string; prefix: string; first_name: string; last_name: string; dob: string; sex: string };
+type Row = { id: number; hn: string; cid: string; prefix: string; first_name: string; last_name: string; dob: string; sex: string; phone: string | null };
 
+// Front desk: search -> open visit in one place; right column = today's queue and where each patient is
 export default async function PatientsPage({ searchParams }: PageProps<"/patients">) {
   const user = await requireRole();
-  const q = String((await searchParams).q ?? "").trim();
+  const sp = await searchParams;
+  const q = String(sp.q ?? "").trim();
+  const isClerk = user.role === "CLERK";
 
   // ponytail: LIKE scan, fine for thousands of rows; FTS5 / pg_trgm when it gets slow
-  const like = `%${q}%`;
-  const rows = db
-    .prepare(
-      `SELECT hn, cid, prefix, first_name, last_name, dob, sex FROM patients
-       WHERE ? = '' OR hn = ? OR cid = ? OR first_name || ' ' || last_name LIKE ?
-       ORDER BY id DESC LIMIT 50`,
-    )
-    .all(q, q.toUpperCase(), q, like) as Row[];
+  const rows = q
+    ? (db
+        .prepare(
+          `SELECT id, hn, cid, prefix, first_name, last_name, dob, sex, phone FROM patients
+           WHERE hn = ? OR cid = ? OR first_name || ' ' || last_name LIKE ? OR phone = ?
+           ORDER BY id DESC LIMIT 20`,
+        )
+        .all(q.toUpperCase(), q, `%${q}%`, q) as Row[])
+    : [];
+  const today = todayVisits();
+  const visitToday = new Map(today.map((v) => [v.patient_id, v]));
+  const opened = typeof sp.opened === "string" ? today.find((v) => v.vn === sp.opened) : undefined;
+  const existed = typeof sp.existed === "string" ? today.find((v) => v.vn === sp.existed) : undefined;
+  // pre-fill the registration form from what was typed
+  const newHref = `/patients/new?${new URLSearchParams(/^\d{13}$/.test(q) ? { cid: q } : q ? { name: q } : {})}`;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">ผู้ป่วย</h1>
-        {["CLERK", "ADMIN"].includes(user.role) && (
-          <Link href="/patients/new" className="btn">
-            + ลงทะเบียนผู้ป่วยใหม่
-          </Link>
-        )}
-      </div>
+    <div className="space-y-5">
+      {opened && (
+        <div className="flex flex-wrap items-center gap-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-5">
+          <div className="flex h-20 w-20 flex-col items-center justify-center rounded-2xl bg-emerald-600 text-white">
+            <span className="text-xs">คิวที่</span>
+            <span className="text-3xl font-bold leading-none">{queueNo(opened.vn)}</span>
+          </div>
+          <div className="flex-1">
+            <div className="text-lg font-semibold text-emerald-900">✓ เปิด Visit ให้ {fullName(opened)} แล้ว</div>
+            <div className="text-sm text-emerald-800">
+              {opened.vn} · {SCHEME[opened.scheme]}
+            </div>
+            <div className="mt-2 text-sm text-slate-700">
+              <b>ขั้นต่อไป:</b> แจ้งเลขคิวและให้ผู้ป่วยไปรอหน้าห้องตรวจ แพทย์จะเห็นชื่อในรายการ Visit วันนี้ทันที
+            </div>
+          </div>
+        </div>
+      )}
+      {existed && (
+        <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {fullName(existed)} มี Visit วันนี้อยู่แล้ว (คิว {queueNo(existed.vn)} · {existed.vn}) ไม่ได้เปิดซ้ำ
+        </p>
+      )}
 
-      {/* plain GET form: search state lives in the URL, works without JS */}
-      <form className="flex gap-2">
-        <input name="q" defaultValue={q} autoFocus className="input" placeholder="HN, เลขบัตรประชาชน หรือ ชื่อ-นามสกุล" />
-        <button className="btn">ค้นหา</button>
-      </form>
-
-      <div className="card p-0">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>HN</th>
-              <th>ชื่อ-นามสกุล</th>
-              <th>เลขบัตรประชาชน</th>
-              <th>วันเกิด</th>
-              <th>เพศ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((p) => (
-              <tr key={p.hn} className="hover:bg-slate-50">
-                <td>
-                  <Link href={`/patients/${p.hn}`} className="font-mono text-teal-700 hover:underline">
-                    {p.hn}
-                  </Link>
-                </td>
-                <td>
-                  {p.prefix}
-                  {p.first_name} {p.last_name}
-                </td>
-                <td className="font-mono">{maskCid(p.cid)}</td>
-                <td>{p.dob}</td>
-                <td>{p.sex === "M" ? "ชาย" : "หญิง"}</td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={5} className="py-8 text-center text-slate-500">
-                  ไม่พบผู้ป่วย
-                </td>
-              </tr>
+      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+        {/* search & open visit */}
+        <section className="space-y-4">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold">{isClerk ? "ค้นหาผู้ป่วย / เปิด Visit" : "ค้นหาผู้ป่วย"}</h1>
+              <p className="text-sm text-slate-500">พิมพ์ HN, เลขบัตรประชาชน 13 หลัก, ชื่อ หรือเบอร์โทร ผลจะขึ้นทันที</p>
+            </div>
+            {isClerk && (
+              <Link href={newHref} className="btn-ghost whitespace-nowrap">
+                + ผู้ป่วยใหม่
+              </Link>
             )}
-          </tbody>
-        </table>
+          </div>
+          <form className="card p-3">
+            {/* new key after a visit is opened -> fresh empty box for the next patient (not keyed on q: that would steal focus while typing) */}
+            <LiveSearch key={opened?.vn ?? existed?.vn ?? "search"} defaultValue={q} placeholder="เช่น HN0000001, 1100000000016, สมชาย" />
+          </form>
+
+          {!q && <p className="px-1 text-sm text-slate-500">เริ่มพิมพ์เพื่อค้นหา หรือดูผู้ป่วยที่เปิด Visit แล้วทางขวา</p>}
+
+          {q && rows.length === 0 && (
+            <div className="card space-y-3 text-center">
+              <div className="text-4xl" aria-hidden>
+                🔍
+              </div>
+              <div className="font-medium">ไม่พบผู้ป่วย “{q}”</div>
+              <p className="text-sm text-slate-500">ตรวจตัวสะกดอีกครั้ง ถ้าเป็นผู้ป่วยใหม่ให้ลงทะเบียน</p>
+              {isClerk && (
+                <Link href={newHref} className="btn mx-auto">
+                  ลงทะเบียนผู้ป่วยใหม่ {/^\d{13}$/.test(q) ? "ด้วยเลขบัตรนี้" : q ? `ชื่อ “${q}”` : ""}
+                </Link>
+              )}
+            </div>
+          )}
+
+          <ul className="space-y-3">
+            {rows.map((p) => {
+              const v = visitToday.get(p.id);
+              return (
+                <li key={p.id} className="card flex flex-wrap items-center gap-4">
+                  <Avatar name={p.first_name} sex={p.sex} />
+                  <div className="min-w-48 flex-1">
+                    <Link href={`/patients/${p.hn}`} className="text-lg font-semibold hover:text-teal-700">
+                      {fullName(p)}
+                    </Link>
+                    <div className="text-sm text-slate-500">
+                      <span className="font-mono text-slate-700">{p.hn}</span> · {p.sex === "M" ? "ชาย" : "หญิง"} {age(p.dob)} ปี ·{" "}
+                      <span className="font-mono">{maskCid(p.cid)}</span>
+                    </div>
+                  </div>
+                  {v ? (
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm text-emerald-800">✓ มี Visit วันนี้ · คิว {queueNo(v.vn)}</span>
+                  ) : isClerk ? (
+                    <form action={openVisit} className="flex items-center gap-2">
+                      <input type="hidden" name="patientId" value={p.id} />
+                      <input type="hidden" name="back" value="list" />
+                      <select name="scheme" aria-label="สิทธิการรักษา" className="input w-40">
+                        {Object.entries(SCHEME).map(([k, label]) => (
+                          <option key={k} value={k}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <button className="btn whitespace-nowrap">เปิด Visit</button>
+                    </form>
+                  ) : (
+                    <Link href={`/patients/${p.hn}`} className="btn-ghost">
+                      ดูข้อมูล →
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        {/* today */}
+        <aside className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold">Visit วันนี้</h2>
+            <span className="text-sm text-slate-500">{today.length} คน</span>
+          </div>
+          <TodayList visits={today} highlight={opened?.vn} action={user.role === "DOCTOR" ? "order" : undefined} />
+        </aside>
       </div>
     </div>
   );
 }
 
-// PDPA: list shows masked national ID, full value only on the patient page
+// PDPA: lists show a masked national ID; the full value only on the patient page
 const maskCid = (c: string) => `${c.slice(0, 1)}-XXXX-XXXXX-${c.slice(10, 12)}-${c.slice(12)}`;

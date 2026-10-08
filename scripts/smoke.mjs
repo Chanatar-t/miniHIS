@@ -23,7 +23,9 @@ const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "star
 const stop = () =>
   new Promise((done) => {
     server.once("exit", () => {
-      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+      // KEEP_DB=1 leaves the populated DB behind (useful for screenshots / demo data)
+      if (process.env.KEEP_DB) console.log(`DB kept at ${DB_FILE}`);
+      else rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
       done();
     });
     server.kill();
@@ -83,12 +85,31 @@ async function main() {
   let r = await submit("/patients/new", clerk, 1, { cid: "1234567890123", prefix: "นาย", sex: "M", first_name: "ก", last_name: "ข", dob: "1990-01-01", phone: "" });
   ok(r.status === 200 && one("SELECT COUNT(*) n FROM patients").n === 30, "bad CID checksum rejected");
   r = await submit("/patients/new", clerk, 1, { cid: "1100000000008", prefix: "นาย", sex: "M", first_name: "ก", last_name: "ข", dob: "1990-01-01", phone: "" });
-  ok(r.loc.endsWith("/patients/HN0000031"), "register patient -> HN0000031");
+  ok(r.loc.includes("/patients/HN0000031?registered=1"), "register patient -> HN0000031 with success banner");
   r = await submit("/patients/new", clerk, 1, { cid: "1100000000008", prefix: "นาย", sex: "M", first_name: "ซ้ำ", last_name: "ซ้ำ", dob: "1990-01-01", phone: "" });
   ok(r.status === 200 && one("SELECT COUNT(*) n FROM patients").n === 31, "duplicate CID blocked");
-  await submit("/patients/HN0000031", clerk, 1, { scheme: "UC" });
+  const isVisitForm = (f) => f.includes('name="scheme"');
+  await submit("/patients/HN0000031", clerk, isVisitForm, { scheme: "UC" });
   const vn = one("SELECT vn FROM visits").vn;
-  ok(/^VN\d{10}$/.test(vn), `visit opened ${vn}`);
+  ok(/^VN\d{10}$/.test(vn), `visit opened from patient page ${vn}`);
+
+  console.log("# front desk");
+  ok((await html("/patients?q=HN9999999", clerk)).includes("ไม่พบผู้ป่วย") && (await html("/patients?q=1100000000024", clerk)).includes("/patients/new?cid=1100000000024"), "not found -> register link pre-filled with the typed CID");
+  ok((await html("/patients/new?cid=1100000000024", clerk)).includes('value="1100000000024"'), "registration form pre-filled");
+  r = await submit("/patients?q=HN0000005", clerk, isVisitForm, { scheme: "SSS" });
+  const vn5 = one("SELECT v.vn FROM visits v JOIN patients p ON p.id = v.patient_id WHERE p.hn = 'HN0000005'")?.vn;
+  ok(vn5 && r.loc === `/patients?opened=${vn5}`, "open visit straight from search result -> back to desk with queue banner");
+  const desk = await html(`/patients?opened=${vn5}`, clerk);
+  ok(desk.includes("เปิด Visit ให้") && desk.includes("คิวที่") && desk.includes("รอพบแพทย์"), "desk shows queue number and today's list");
+  ok(!forms(await html("/patients?q=HN0000005", clerk)).some(isVisitForm), "patient with a visit today has no open-visit button");
+  r = await submit("/patients?q=HN0000006", clerk, isVisitForm, { scheme: "UC" });
+  const staleDesk = forms(await html("/patients?q=HN0000006", clerk)); // already opened: no form, so replay the earlier one
+  ok(!staleDesk.some(isVisitForm), "second open hidden in UI");
+  const p6 = one("SELECT id FROM patients WHERE hn = 'HN0000006'").id;
+  const visitFormAny = forms(await html("/patients?q=HN0000007", clerk)).find(isVisitForm);
+  r = await post("/patients", clerk, visitFormAny, { patientId: p6, scheme: "UC", back: "list" }, true);
+  ok(r.loc.startsWith("/patients?existed=") && one("SELECT COUNT(*) n FROM visits WHERE patient_id = ?", p6).n === 1, "duplicate visit same day blocked server-side");
+  ok((await html("/patients", doc)).includes(`/visits/${vn5}/order`), "doctor's today list links straight to ordering");
   await submit(`/visits/${vn}/order`, doc, 1, { testId: [4, 5, 3, 2], priority: "STAT", note: "" }); // order 1: TSH FT4 HBA1C CREA
   await submit(`/visits/${vn}/order`, doc, 1, { testId: [6], priority: "ROUTINE", note: "" }); // order 2: VITD
   ok(one("SELECT COUNT(*) n FROM lab_order_items").n === 5, "2 orders, 5 tests");
@@ -211,6 +232,8 @@ async function main() {
   const pt = await html("/patients/HN0000031", doc);
   ok(pt.includes("HH วิกฤต") && pt.includes('href="/reports/1"'), "doctor sees verified critical result + report link");
   ok((pt.match(/รายงานผลครบ/g) || []).length >= 1, "patient page shows derived order status (order 1 complete)");
+  const clerkView = await html("/patients/HN0000031", clerk);
+  ok(!clerkView.includes("HH วิกฤต") && !clerkView.includes("/reports/1") && clerkView.includes("ตรวจ Lab 5 รายการ"), "front desk sees visit + test count, not lab values");
   const rep = await html("/reports/1", doc);
   ok(rep.includes("รายงานผลครบ"), "report header shows order status");
   ok(rep.includes("แจ้ง นพ.ธนา ทางโทรศัพท์") && rep.includes("LOINC 3016-3"), "report shows critical notification and LOINC");

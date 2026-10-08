@@ -46,6 +46,21 @@ export const REJECT_REASONS = [
   "สูญหายระหว่างขนส่ง",
 ] as const;
 
+// "2026-10-08 21:59:19" (SQLite local time) -> "8 ต.ค. 2569 21:59"
+export function thDate(s: string, withTime = true) {
+  const d = new Date(s.replace(" ", "T"));
+  return d.toLocaleString("th-TH", withTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" });
+}
+
+// queue number shown to the patient = today's running part of the VN (VN2610080003 -> 3)
+export const queueNo = (vn: string) => Number(vn.slice(-4));
+
+// what a visit is waiting for, in front-desk words
+export const VISIT_STATUS: Record<string, { label: string; cls: string }> = {
+  NO_ORDER: { label: "รอพบแพทย์", cls: "bg-sky-100 text-sky-800" },
+  ...ORDER_STATUS,
+};
+
 export function age(dob: string, at = new Date()) {
   const d = new Date(dob);
   let y = at.getFullYear() - d.getFullYear();

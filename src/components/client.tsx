@@ -1,7 +1,47 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import JsBarcode from "jsbarcode";
+
+// Search as you type: updates ?q= after a short pause. Inside a GET form, so Enter / no-JS still work.
+export function LiveSearch({ defaultValue, placeholder }: { defaultValue: string; placeholder: string }) {
+  const router = useRouter();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  return (
+    <input
+      name="q"
+      type="search"
+      defaultValue={defaultValue}
+      placeholder={placeholder}
+      autoFocus
+      autoComplete="off"
+      aria-label={placeholder}
+      className="input py-3 text-lg"
+      onChange={(e) => {
+        const q = e.target.value;
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => router.replace(q ? `?q=${encodeURIComponent(q)}` : "?", { scroll: false }), 250);
+      }}
+    />
+  );
+}
+
+// top-nav link that shows where you are
+export function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const path = usePathname();
+  const active = path === href || path.startsWith(`${href}/`);
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`rounded-md px-2.5 py-1.5 ${active ? "bg-teal-50 font-medium text-teal-800" : "text-slate-600 hover:bg-slate-50 hover:text-teal-700"}`}
+    >
+      {children}
+    </Link>
+  );
+}
 
 export function Barcode({ value, height = 40 }: { value: string; height?: number }) {
   const ref = useRef<SVGSVGElement>(null);

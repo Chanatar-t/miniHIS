@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
 import { currentUser, logout, type Role } from "@/lib/auth";
+import { NavLink } from "@/components/client";
 import "./globals.css";
 
 const font = IBM_Plex_Sans_Thai({
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 const NAV: { href: string; label: string; roles: Role[] }[] = [
-  { href: "/patients", label: "ผู้ป่วย", roles: ["CLERK", "DOCTOR", "LAB", "ADMIN"] },
+  { href: "/patients", label: "ผู้ป่วย / Visit วันนี้", roles: ["CLERK", "DOCTOR", "LAB", "ADMIN"] },
   { href: "/lab/collect", label: "เก็บสิ่งส่งตรวจ", roles: ["LAB"] },
   { href: "/lab/receive", label: "รับเข้า Lab", roles: ["LAB"] },
   { href: "/lab/shipments", label: "ส่ง Outlab", roles: ["LAB"] },
@@ -44,11 +45,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/" className="font-semibold text-teal-700">
                 Mini HIS
               </Link>
-              <nav className="flex gap-4 text-sm">
+              <nav className="flex flex-wrap gap-1 text-sm">
                 {NAV.filter((n) => n.roles.includes(user.role)).map((n) => (
-                  <Link key={n.href} href={n.href} className="text-slate-600 hover:text-teal-700">
+                  <NavLink key={n.href} href={n.href}>
                     {n.label}
-                  </Link>
+                  </NavLink>
                 ))}
               </nav>
               <form action={signOut} className="ml-auto flex items-center gap-3 text-sm">

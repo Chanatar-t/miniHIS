@@ -3,9 +3,9 @@
 import { useActionState } from "react";
 import { createPatient, type FormState } from "../actions";
 
-export function PatientForm() {
+export function PatientForm({ initial = {} }: { initial?: Record<string, string> }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createPatient, {});
-  const f = state.fields ?? {};
+  const f = state.fields ?? initial;
 
   return (
     <form action={action} className="card grid grid-cols-2 gap-4">

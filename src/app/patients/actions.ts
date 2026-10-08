@@ -38,7 +38,7 @@ export async function createPatient(_: FormState, formData: FormData): Promise<F
     audit(db, user.id, "CREATE", "patient", lastInsertRowid);
     return hn;
   });
-  redirect(`/patients/${hn}`);
+  redirect(`/patients/${hn}?registered=1`);
 }
 
 const VisitInput = z.object({
@@ -46,17 +46,23 @@ const VisitInput = z.object({
   scheme: z.enum(["UC", "SSS", "CSMBS", "SELF"]),
 });
 
+// Opened from the search list (back=list) or the patient page; returns there with ?opened=VN for the success banner.
 export async function openVisit(formData: FormData) {
   const user = await requireRole("CLERK");
   const v = VisitInput.parse(Object.fromEntries(formData));
-  const hn = tx(db, () => {
+  const r = tx(db, () => {
     const p = db.prepare("SELECT hn FROM patients WHERE id = ?").get(v.patientId) as { hn: string } | undefined;
     if (!p) throw new Error("Patient not found");
-    const { lastInsertRowid } = db
-      .prepare("INSERT INTO visits(vn, patient_id, scheme) VALUES (?, ?, ?)")
-      .run(newVn(db), v.patientId, v.scheme);
-    audit(db, user.id, "CREATE", "visit", lastInsertRowid);
-    return p.hn;
+    // one visit per patient per day: a second click / second clerk must not create a second queue number
+    const today = db
+      .prepare("SELECT vn FROM visits WHERE patient_id = ? AND date(created_at) = date('now','localtime')")
+      .get(v.patientId) as { vn: string } | undefined;
+    if (today) return { hn: p.hn, vn: today.vn, existed: true };
+    const vn = newVn(db);
+    const { lastInsertRowid } = db.prepare("INSERT INTO visits(vn, patient_id, scheme) VALUES (?, ?, ?)").run(vn, v.patientId, v.scheme);
+    audit(db, user.id, "CREATE", "visit", lastInsertRowid, vn);
+    return { hn: p.hn, vn, existed: false };
   });
-  redirect(`/patients/${hn}`);
+  const base = formData.get("back") === "list" ? "/patients" : `/patients/${r.hn}`;
+  redirect(`${base}?${new URLSearchParams(r.existed ? { existed: r.vn } : { opened: r.vn })}`);
 }
