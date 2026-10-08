@@ -78,7 +78,7 @@ export default async function GuidePage() {
       <section>
         <h2 className="text-xl font-semibold">ภาพรวม: หลอดเลือดหนึ่งหลอดเดินทางอย่างไร</h2>
         <p className="mt-1 text-sm text-slate-600">ทุกบทบาททำงานต่อกันเป็นสายเดียว สีบอกว่าใครรับผิดชอบขั้นนั้น</p>
-        <ol className="stagger mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+        <ol className="stagger mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-9">
           {FLOW.map((f, i) => {
             const g = GUIDES.find((x) => x.slug === f.by)!;
             return (

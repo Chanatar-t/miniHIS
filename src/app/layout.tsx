@@ -21,12 +21,12 @@ export const metadata: Metadata = {
 };
 
 const NAV: { href: string; label: string; icon: LucideIcon; roles: Role[] }[] = [
-  { href: "/patients", label: "ผู้ป่วย / Visit วันนี้", icon: Users, roles: ["CLERK", "DOCTOR", "LAB", "ADMIN"] },
+  { href: "/patients", label: "ผู้ป่วย / Visit วันนี้", icon: Users, roles: ["CLERK", "NURSE", "DOCTOR", "LAB", "ADMIN"] },
   // one entry: the lab pages carry their own step bar (collect > receive > ship > results > verify)
   { href: "/lab", label: "งาน Lab", icon: TestTubeDiagonal, roles: ["LAB"] },
   { href: "/config", label: "ค่าอ้างอิง", icon: SlidersHorizontal, roles: ["LAB"] },
   { href: "/admin/audit", label: "Audit log", icon: ScrollText, roles: ["ADMIN"] },
-  { href: "/guide", label: "คู่มือ / UAT", icon: BookOpen, roles: ["CLERK", "DOCTOR", "LAB", "ADMIN"] },
+  { href: "/guide", label: "คู่มือ / UAT", icon: BookOpen, roles: ["CLERK", "NURSE", "DOCTOR", "LAB", "ADMIN"] },
 ];
 
 async function signOut() {
@@ -35,7 +35,7 @@ async function signOut() {
   redirect("/login");
 }
 
-const ROLE_TH: Record<Role, string> = { CLERK: "เวชระเบียน", DOCTOR: "แพทย์", LAB: "ห้องปฏิบัติการ", ADMIN: "ผู้ดูแลระบบ" };
+const ROLE_TH: Record<Role, string> = { CLERK: "เวชระเบียน", NURSE: "พยาบาล", DOCTOR: "แพทย์", LAB: "ห้องปฏิบัติการ", ADMIN: "ผู้ดูแลระบบ" };
 
 // work waiting behind a menu item, so the header itself says where to go next
 function badges(user: { role: Role; canApprove: number }) {

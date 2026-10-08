@@ -4,7 +4,8 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { db, tx, audit, newHn, newVn } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
-import { isValidCid } from "@/lib/rules";
+import { VITAL_FIELDS, isValidCid, vitalsErrors, type VitalKey } from "@/lib/rules";
+import { fail, withFlash } from "@/lib/flash";
 
 export type FormState = { error?: string; fields?: Record<string, string> };
 
@@ -71,4 +72,98 @@ export async function openVisit(formData: FormData) {
   });
   const base = formData.get("back") === "list" ? "/patients" : `/patients/${r.hn}`;
   redirect(`${base}?${new URLSearchParams(r.existed ? { existed: r.vn } : { opened: r.vn })}`);
+}
+
+// Allergy forms sit on the patient page; go back there (validated: never an open redirect)
+const backTo = (formData: FormData) => {
+  const b = String(formData.get("back") ?? "");
+  return /^\/patients\/HN\d+$/.test(b) ? b : "/patients";
+};
+const AllergyInput = z.object({
+  patientId: z.coerce.number().int().positive(),
+  drug: z.string().trim().min(1, "กรอกชื่อยาที่แพ้").max(100),
+  reaction: z.string().trim().max(200),
+});
+
+export async function addAllergy(formData: FormData) {
+  await withFlash(backTo(formData), async () => {
+    const user = await requireRole("NURSE", "DOCTOR");
+    const a = AllergyInput.safeParse(Object.fromEntries(formData));
+    if (!a.success) fail(a.error.issues[0].message);
+    const { patientId, drug, reaction } = a.data;
+    return tx(db, () => {
+      if (!db.prepare("SELECT 1 FROM patients WHERE id = ?").get(patientId)) fail("ไม่พบผู้ป่วย");
+      if (db.prepare("SELECT 1 FROM allergies WHERE patient_id = ? AND removed_at IS NULL AND lower(drug) = lower(?)").get(patientId, drug))
+        fail(`มีประวัติแพ้ ${drug} อยู่แล้ว`);
+      const { lastInsertRowid } = db
+        .prepare("INSERT INTO allergies(patient_id, drug, reaction, recorded_by) VALUES (?, ?, ?, ?)")
+        .run(patientId, drug, reaction || null, user.id);
+      db.prepare("UPDATE patients SET nkda_at = NULL WHERE id = ?").run(patientId); // an allergy overrides "no known allergy"
+      audit(db, user.id, "CREATE", "allergy", lastInsertRowid, drug);
+      return `บันทึกแพ้ยา ${drug} แล้ว`;
+    });
+  });
+}
+
+// Wrong entry: hide it, keep the row (who recorded it, who removed it)
+export async function removeAllergy(formData: FormData) {
+  await withFlash(backTo(formData), async () => {
+    const user = await requireRole("NURSE", "DOCTOR");
+    const id = z.coerce.number().int().positive().parse(formData.get("allergyId"));
+    return tx(db, () => {
+      const r = db
+        .prepare("UPDATE allergies SET removed_at = datetime('now','localtime'), removed_by = ? WHERE id = ? AND removed_at IS NULL RETURNING drug")
+        .get(user.id, id) as { drug: string } | undefined;
+      if (!r) fail("รายการนี้ถูกลบไปแล้ว");
+      audit(db, user.id, "REMOVE", "allergy", id, r.drug);
+      return `ลบรายการแพ้ ${r.drug} แล้ว`;
+    });
+  });
+}
+
+// Asked, and the patient has no known drug allergy: differs from "never asked"
+export async function markNoAllergy(formData: FormData) {
+  await withFlash(backTo(formData), async () => {
+    const user = await requireRole("NURSE", "DOCTOR");
+    const patientId = z.coerce.number().int().positive().parse(formData.get("patientId"));
+    return tx(db, () => {
+      if (db.prepare("SELECT 1 FROM allergies WHERE patient_id = ? AND removed_at IS NULL").get(patientId))
+        fail("ผู้ป่วยมีประวัติแพ้ยาอยู่ ต้องลบรายการเดิมก่อน");
+      db.prepare("UPDATE patients SET nkda_at = datetime('now','localtime') WHERE id = ?").run(patientId);
+      audit(db, user.id, "NKDA", "patient", patientId);
+      return "บันทึกว่า ผู้ป่วยปฏิเสธการแพ้ยา แล้ว";
+    });
+  });
+}
+
+export type VitalsState = { errors?: Partial<Record<VitalKey, string>>; error?: string };
+
+// Nurse screening, from the modal on the patient page. Errors come back to the form (typed values stay);
+// only a successful save redirects.
+export async function saveVitals(_: VitalsState, formData: FormData): Promise<VitalsState> {
+  const user = await requireRole("NURSE", "DOCTOR");
+  const raw = Object.fromEntries(VITAL_FIELDS.map((f) => [f.key, String(formData.get(f.key) ?? "")])) as Record<VitalKey, string>;
+  const cc = String(formData.get("cc") ?? "").trim().slice(0, 500);
+  const errors = vitalsErrors(raw, true);
+  if (Object.keys(errors).length) return { errors, error: "มีช่องที่ต้องแก้ ดูข้อความสีแดงใต้ช่อง" };
+  const v = Object.fromEntries(VITAL_FIELDS.map((f) => [f.key, raw[f.key].trim() ? Number(raw[f.key]) : null])) as Record<VitalKey, number | null>;
+  if (Object.values(v).every((x) => x === null) && !cc) return { error: "ยังไม่ได้กรอกค่าใดเลย" };
+
+  const vn = String(formData.get("vn"));
+  const hn = tx(db, () => {
+    const visit = db.prepare("SELECT v.id, p.hn FROM visits v JOIN patients p ON p.id = v.patient_id WHERE v.vn = ?").get(vn) as
+      | { id: number; hn: string }
+      | undefined;
+    if (!visit) throw new Error("Visit not found");
+    db.prepare(
+      `INSERT INTO vitals(visit_id, sbp, dbp, pulse, rr, temp, spo2, weight, height, cc, recorded_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+       ON CONFLICT(visit_id) DO UPDATE SET sbp=excluded.sbp, dbp=excluded.dbp, pulse=excluded.pulse, rr=excluded.rr, temp=excluded.temp,
+         spo2=excluded.spo2, weight=excluded.weight, height=excluded.height, cc=excluded.cc,
+         recorded_by=excluded.recorded_by, recorded_at=datetime('now','localtime')`,
+    ).run(visit.id, v.sbp, v.dbp, v.pulse, v.rr, v.temp, v.spo2, v.weight, v.height, cc || null, user.id);
+    // values in the audit detail: a re-measure overwrites the row, the log keeps every version
+    audit(db, user.id, "SAVE", "vitals", visit.id, JSON.stringify({ ...v, cc }));
+    return visit.hn;
+  });
+  redirect(`/patients/${hn}?${new URLSearchParams({ msg: "บันทึกซักประวัติแล้ว สถานะเปลี่ยนเป็น รอพบแพทย์" })}`);
 }

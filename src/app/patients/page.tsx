@@ -1,4 +1,4 @@
-import { Check, CircleCheck, SearchX } from "lucide-react";
+import { Check, CircleCheck, Printer, SearchX } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -56,14 +56,20 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
               {opened.vn} · {SCHEME[opened.scheme]}
             </div>
             <div className="mt-2 text-sm text-slate-700">
-              <b>ขั้นต่อไป:</b> แจ้งเลขคิวและให้ผู้ป่วยไปรอหน้าห้องตรวจ แพทย์จะเห็นชื่อในรายการ Visit วันนี้ทันที
+              <b>ขั้นต่อไป:</b> พิมพ์ใบคิวให้ผู้ป่วยถือไว้ แล้วให้ไปรอหน้าห้องตรวจ แพทย์จะเห็นชื่อในรายการ Visit วันนี้ทันที
             </div>
           </div>
+          <Link href={`/visits/${opened.vn}/slip?back=list`} className="btn px-5 py-3 text-base">
+            <Printer className="h-5 w-5" aria-hidden /> พิมพ์ใบคิว
+          </Link>
         </div>
       )}
       {existed && (
-        <p className="animate-fade-up rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="animate-fade-up flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {fullName(existed)} มี Visit วันนี้อยู่แล้ว (คิว {queueNo(existed.vn)} · {existed.vn}) ไม่ได้เปิดซ้ำ
+          <Link href={`/visits/${existed.vn}/slip?back=list`} className="btn-ghost">
+            <Printer className="h-4 w-4" aria-hidden /> พิมพ์ใบคิวซ้ำ
+          </Link>
         </p>
       )}
 
@@ -119,7 +125,19 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
                     </div>
                   </div>
                   {v ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-sm text-emerald-800"><Check className="h-4 w-4" aria-hidden /> มี Visit วันนี้ · คิว {queueNo(v.vn)}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-sm text-emerald-800"><Check className="h-4 w-4" aria-hidden /> มี Visit วันนี้ · คิว {queueNo(v.vn)}</span>
+                      {user.role === "DOCTOR" && (
+                        <Link href={`/visits/${v.vn}/order`} className="btn whitespace-nowrap">
+                          สั่ง Lab
+                        </Link>
+                      )}
+                      {user.role === "NURSE" && (
+                        <Link href={`/patients/${p.hn}`} className="btn whitespace-nowrap">
+                          ซักประวัติ
+                        </Link>
+                      )}
+                    </span>
                   ) : isClerk ? (
                     <form action={openVisit} className="flex items-center gap-2">
                       <input type="hidden" name="patientId" value={p.id} />
@@ -151,7 +169,13 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
             <h2 className="text-lg font-semibold">Visit วันนี้</h2>
             <span className="text-sm text-slate-500">{today.length} คน</span>
           </div>
-          <TodayList visits={today} highlight={opened?.vn} action={user.role === "DOCTOR" ? "order" : undefined} />
+          {/* not a queue board: just the latest few to confirm what was opened; anyone else -> search on the left */}
+          <TodayList visits={today.slice(0, TODAY_SHOWN)} highlight={opened?.vn} action={user.role === "DOCTOR" ? "order" : user.role === "NURSE" ? "vitals" : undefined} />
+          {today.length > TODAY_SHOWN && (
+            <p className="rounded-lg border border-dashed border-slate-300 p-3 text-center text-sm text-slate-500">
+              แสดง {TODAY_SHOWN} คนล่าสุด · อีก {today.length - TODAY_SHOWN} คน ค้นหาด้วยชื่อหรือ HN ทางซ้าย
+            </p>
+          )}
         </aside>
       </div>
     </div>
@@ -162,6 +186,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
 const maskCid = (c: string) => `${c.slice(0, 1)}-XXXX-XXXXX-${c.slice(10, 12)}-${c.slice(12)}`;
 
 const PAGE_SIZE = 10;
+const TODAY_SHOWN = 10;
 
 // ‹ 1 2 3 … › links; keeps the search text, works without JS
 function Pager({ page, pages, q }: { page: number; pages: number; q: string }) {

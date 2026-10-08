@@ -17,6 +17,8 @@ function open(): DatabaseSync {
     if (!db.prepare("SELECT 1 FROM users").get()) seed(db);
     upgrade(db);
   });
+  addRole(db); // after upgrade (needs its columns), outside tx (needs foreign_keys OFF)
+  db.prepare("INSERT INTO users(username, name, role) SELECT 'nurse', 'พว.มาลี ซักประวัติ', 'NURSE' WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'nurse')").run();
   return db;
 }
 
@@ -30,6 +32,7 @@ const ADDED_COLUMNS: [table: string, column: string, type: string][] = [
   ["lab_order_items", "ref_high", "REAL"],
   ["lab_order_items", "crit_low", "REAL"],
   ["lab_order_items", "crit_high", "REAL"],
+  ["patients", "nkda_at", "TEXT"], // asked and the patient has no known drug allergy (vs never asked)
 ];
 function upgrade(d: DatabaseSync) {
   for (const [table, column, type] of ADDED_COLUMNS) {
@@ -61,6 +64,29 @@ function upgrade(d: DatabaseSync) {
       ins.run(t.id, null, t.ref_low, t.ref_high, t.crit_low, t.crit_high, "ค่าเริ่มต้นจากระบบเดิม", approver, approver);
       for (const [sex, lo, hi] of bySex[t.code] ?? []) ins.run(t.id, sex, lo, hi, t.crit_low, t.crit_high, "ค่าอ้างอิงแยกตามเพศ", approver, approver);
     }
+  }
+}
+
+// users.role CHECK gained NURSE. SQLite can't alter a CHECK, so an older DB gets users rebuilt once.
+// Foreign keys must be OFF for DROP TABLE users (every table references it), and that pragma only works outside a transaction.
+function addRole(d: DatabaseSync) {
+  const sql = (d.prepare("SELECT sql FROM sqlite_master WHERE name = 'users'").get() as { sql: string } | undefined)?.sql;
+  if (!sql || sql.includes("'NURSE'")) return; // brand-new DB: schema.sql creates it right
+  d.exec("PRAGMA foreign_keys = OFF");
+  try {
+    tx(d, () => {
+      if ((d.prepare("SELECT sql FROM sqlite_master WHERE name = 'users'").get() as { sql: string }).sql.includes("'NURSE'")) return; // another process won
+      d.exec(`CREATE TABLE users_new (
+        id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('CLERK','NURSE','DOCTOR','LAB','ADMIN')),
+        can_approve_config INTEGER NOT NULL DEFAULT 0);
+        INSERT INTO users_new SELECT id, username, name, role, can_approve_config FROM users;
+        DROP TABLE users;
+        ALTER TABLE users_new RENAME TO users;`);
+      if (d.prepare("PRAGMA foreign_key_check").get()) throw new Error("users rebuild broke a foreign key");
+    });
+  } finally {
+    d.exec("PRAGMA foreign_keys = ON");
   }
 }
 

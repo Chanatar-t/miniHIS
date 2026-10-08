@@ -79,3 +79,9 @@ export function PrintButton({ label = "พิมพ์" }: { label?: string }) {
     </button>
   );
 }
+
+// open the print dialog once the page is shown (queue slip: one click from "visit opened" to paper)
+export function AutoPrint() {
+  useEffect(() => window.print(), []);
+  return null;
+}

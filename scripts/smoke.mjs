@@ -82,6 +82,7 @@ async function main() {
   const clerk = ck(1), doc = ck(2), lab = ck(3);
 
   console.log("# registration & ordering");
+  let g;
   let r = await submit("/patients/new", clerk, 1, { cid: "1234567890123", prefix: "นาย", sex: "M", first_name: "ก", last_name: "ข", dob: "1990-01-01", phone: "" });
   ok(r.status === 200 && one("SELECT COUNT(*) n FROM patients").n === 30, "bad CID checksum rejected");
   r = await submit("/patients/new", clerk, 1, { cid: "1100000000008", prefix: "นาย", sex: "M", first_name: "ก", last_name: "ข", dob: "1990-01-01", phone: "" });
@@ -112,7 +113,7 @@ async function main() {
   const vn5 = one("SELECT v.vn FROM visits v JOIN patients p ON p.id = v.patient_id WHERE p.hn = 'HN0000005'")?.vn;
   ok(vn5 && r.loc === `/patients?opened=${vn5}`, "open visit straight from search result -> back to desk with queue banner");
   const desk = await html(`/patients?opened=${vn5}`, clerk);
-  ok(desk.includes("เปิด Visit ให้") && desk.includes("คิวที่") && desk.includes("รอพบแพทย์"), "desk shows queue number and today's list");
+  ok(desk.includes("เปิด Visit ให้") && desk.includes("คิวที่") && desk.includes("รอซักประวัติ"), "desk shows queue number and today's list");
   ok(!forms(await html("/patients?q=HN0000005", clerk)).some(isVisitForm), "patient with a visit today has no open-visit button");
   r = await submit("/patients?q=HN0000006", clerk, isVisitForm, { scheme: "UC" });
   const staleDesk = forms(await html("/patients?q=HN0000006", clerk)); // already opened: no form, so replay the earlier one
@@ -126,7 +127,45 @@ async function main() {
   await submit(`/visits/${vn}/order`, doc, 1, { testId: [6], priority: "ROUTINE", note: "" }); // order 2: VITD
   ok(one("SELECT COUNT(*) n FROM lab_order_items").n === 5, "2 orders, 5 tests");
 
+  console.log("# nurse screening");
+  const nurse = ck(one("SELECT id FROM users WHERE username = 'nurse'").id);
+  const p5 = one("SELECT id FROM patients WHERE hn = 'HN0000005'").id;
+  const P5 = "/patients/HN0000005";
+  ok((await html("/patients", nurse)).includes(`href="${P5}"`) && (await html(P5, nurse)).includes("vitals-title"), "nurse: today list -> patient page with screening modal");
+  ok((await html(P5, nurse)).includes("ยังไม่ได้ซักประวัติแพ้ยา"), "never asked about allergy shows as not asked (not as safe)");
+  const isAllergyForm = (f) => f.includes('name="drug"');
+  r = await submit(P5, nurse, isAllergyForm, { drug: "Penicillin", reaction: "ผื่น" });
+  ok(r.loc.startsWith(`${P5}?msg=`) && one("SELECT COUNT(*) n FROM allergies WHERE patient_id = ?", p5).n === 1, "nurse records a drug allergy");
+  r = await submit(P5, nurse, isAllergyForm, { drug: "penicillin", reaction: "" });
+  ok(r.loc.includes("err=") && one("SELECT COUNT(*) n FROM allergies WHERE patient_id = ?", p5).n === 1, "same drug twice blocked");
+  ok((await html(P5, clerk)).includes("แพ้ยา 1 รายการ"), "allergy banner visible to the front desk too");
+  const isVitalsForm = (f) => f.includes('name="sbp"');
+  r = await submit(P5, nurse, isVitalsForm, { sbp: "80", dbp: "120", weight: "60", height: "160", cc: "" });
+  ok(r.status === 200 && !one("SELECT 1 FROM vitals"), "swapped BP (dbp > sbp) rejected, stays on the form");
+  r = await submit(P5, nurse, isVitalsForm, { sbp: "1500", dbp: "90" });
+  ok(r.status === 200 && !one("SELECT 1 FROM vitals"), "implausible BP rejected");
+  r = await submit(P5, nurse, isVitalsForm, { sbp: "150", dbp: "95", pulse: "88", temp: "36.9", spo2: "98", weight: "70", height: "170", cc: "ปวดหัว" });
+  ok(r.loc.startsWith(`${P5}?msg=`), "vitals saved -> patient page");
+  const pp = await html(P5, doc);
+  ok(pp.includes("BP 150/95") && pp.includes("BMI 24.2 (น้ำหนักเกิน)") && pp.includes("ความดันสูง") && pp.includes("ปวดหัว"), "doctor sees vitals, BMI and BP alert");
+  const clerkP5 = await html(P5, clerk);
+  ok(!clerkP5.includes("BP 150/95") && !clerkP5.includes("vitals-title"), "front desk sees neither vital signs nor the screening form");
+  ok((await html("/patients", doc)).includes("รอพบแพทย์"), "screened visit moves to waiting for doctor");
+  const nurseP5 = await html(P5, nurse);
+  ok(nurseP5.includes("แก้ซักประวัติ") && nurseP5.includes('value="150"'), "re-open: form pre-filled with today's values");
+  const vitalsForm = forms(nurseP5).find(isVitalsForm);
+  r = await post(P5, nurse, vitalsForm, { sbp: "130", dbp: "85", weight: "70", height: "170" });
+  ok(one("SELECT sbp FROM vitals").sbp === 130 && one("SELECT COUNT(*) n FROM audit_log WHERE entity = 'vitals'").n === 2, "re-measure overwrites, audit keeps both");
+  r = await post(P5, clerk, vitalsForm, { vn: vn5, sbp: "100", dbp: "60" }, true);
+  ok(r.loc.endsWith("/forbidden") && one("SELECT sbp FROM vitals").sbp === 130, "front desk POSTing vitals directly -> blocked");
+
   console.log("# collect");
+  g = await get("/lab", lab);
+  ok(g.status === 200 && (await g.text()).includes("เริ่มที่นี่"), "/lab is an overview page (no redirect: browser back works)");
+  for (const step of ["collect", "receive", "shipments", "results", "verify"]) {
+    const h = await html(`/lab/${step}`, lab);
+    ok(h.includes('href="/lab"') && h.includes("ภาพรวมงาน Lab") && h.includes('aria-label="ขั้นตอนงาน Lab"') && h.includes('aria-current="step"'), `/lab/${step}: back link + step bar with current step`);
+  }
   const collectPage = await html("/lab/collect", lab);
   ok(collectPage.indexOf("STAT") < collectPage.indexOf("VITD"), "STAT order listed first");
   const collectForm1 = forms(collectPage).find((f) => f.includes('name="orderId" value="1"'));
@@ -189,7 +228,7 @@ async function main() {
   ok([1, 2, 3].every((i) => itemStatus(i) === "SENT") && itemStatus(4) === "RECEIVED", "TSH FT4 HBA1C SENT, CREA stays in-house");
 
   console.log("# access control");
-  let g = await get("/lab/collect", clerk);
+  g = await get("/lab/collect", clerk);
   ok(g.status === 307 && g.headers.get("location").endsWith("/forbidden"), "clerk opens lab page -> /forbidden");
   const before = one("SELECT COUNT(*) n FROM specimens").n;
   const fakeCollect = forms(await html("/lab/collect", lab)).find((f) => f.includes("orderId"));
@@ -297,6 +336,8 @@ async function main() {
   ok(gp.status === 200 && (await gp.text()).includes("คู่มือการใช้งานและทดสอบระบบ"), "guide is public (no login)");
   ok((await html("/guide/lab")).includes("เพื่อบันทึกผลการทดสอบ"), "anonymous reader sees guide but not the UAT form");
   ok((await get("/guide/nope")).status === 404, "unknown guide -> 404");
+  const ng = await html("/guide/nurse");
+  ok(ng.includes("ซักประวัติผู้ป่วยในคิว") && ng.includes("UAT-NUR-08") && (await html("/guide")).includes("ซักประวัติ + แพ้ยา"), "nurse guide + UAT cases + flow step render");
   const tryForm = forms(await html("/guide/lab")).find((f) => f.includes('name="userId" value="3"'));
   const tr = await fetch(`${B}/guide/lab`, { method: "POST", body: (() => { const b = new FormData(); for (const [n, v] of hidden(tryForm)) b.append(n, v); return b; })(), headers: { origin: B }, redirect: "manual" });
   ok(tr.headers.get("location")?.endsWith("/lab/collect") && (tr.headers.get("set-cookie") ?? "").includes("session=3."), "'try as' logs in as lab and opens the first task page");

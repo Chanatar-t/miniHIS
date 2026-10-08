@@ -17,12 +17,13 @@ async function signIn(formData: FormData) {
 
 const ROLE: Record<string, { label: string; does: string; cls: string }> = {
   CLERK: { label: "เวชระเบียน", does: "ค้นหา/ลงทะเบียนผู้ป่วย เปิด Visit ออกเลขคิว", cls: "bg-sky-100 text-sky-800" },
+  NURSE: { label: "พยาบาลคัดกรอง", does: "ซักประวัติ: ประวัติแพ้ยา ความดัน ชีพจร น้ำหนัก ส่วนสูง อาการสำคัญ", cls: "bg-amber-100 text-amber-800" },
   DOCTOR: { label: "แพทย์", does: "สั่ง Lab อ่านผลเทียบครั้งก่อน ใบรายงาน AI สรุป (ไม่บังคับ)", cls: "bg-teal-100 text-teal-800" },
   LAB: { label: "ห้อง Lab", does: "เก็บ → รับเข้า → ส่ง Outlab → ลงผล/HL7 → Verify", cls: "bg-violet-100 text-violet-800" },
   ADMIN: { label: "ผู้ดูแลระบบ", does: "Audit log: ใครเปิดดู/แก้ข้อมูลผู้ป่วยคนไหน", cls: "bg-slate-200 text-slate-700" },
 };
 
-const FLOW = ["ลงทะเบียน", "เปิด Visit", "แพทย์สั่ง Lab", "เจาะเลือด + barcode", "รับเข้า Lab", "ส่ง Outlab", "ผล HL7", "Verify 2 คน", "แพทย์อ่านผล"];
+const FLOW = ["ลงทะเบียน", "เปิด Visit", "ซักประวัติ", "แพทย์สั่ง Lab", "เจาะเลือด + barcode", "รับเข้า Lab", "ส่ง Outlab", "ผล HL7", "Verify 2 คน", "แพทย์อ่านผล"];
 
 const HIGHLIGHTS = [
   [TestTubeDiagonal, "ตามรอยทุกหลอด", "Accession barcode, แยกหลอดอัตโนมัติ, ใบนำส่งแยกตาม Outlab, reject แล้วเจาะซ้ำให้เอง"],

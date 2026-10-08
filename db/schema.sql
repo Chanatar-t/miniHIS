@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   id       INTEGER PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   name     TEXT NOT NULL,
-  role     TEXT NOT NULL CHECK (role IN ('CLERK','DOCTOR','LAB','ADMIN')),
+  role     TEXT NOT NULL CHECK (role IN ('CLERK','NURSE','DOCTOR','LAB','ADMIN')),
   can_approve_config INTEGER NOT NULL DEFAULT 0  -- permission, not a role: e.g. the pathologist (also LAB)
 );
 
@@ -37,6 +37,37 @@ CREATE TABLE IF NOT EXISTS visits (
   patient_id INTEGER NOT NULL REFERENCES patients(id),
   scheme     TEXT NOT NULL CHECK (scheme IN ('UC','SSS','CSMBS','SELF')), -- บัตรทอง/ประกันสังคม/ข้าราชการ/ชำระเอง
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_visits_patient ON visits(patient_id);
+CREATE INDEX IF NOT EXISTS idx_visits_created ON visits(created_at);
+
+-- drug allergies, per patient. Never hard-deleted: a wrong entry gets removed_at/removed_by (still in the record)
+CREATE TABLE IF NOT EXISTS allergies (
+  id          INTEGER PRIMARY KEY,
+  patient_id  INTEGER NOT NULL REFERENCES patients(id),
+  drug        TEXT NOT NULL,
+  reaction    TEXT,
+  recorded_by INTEGER NOT NULL REFERENCES users(id),
+  created_at  TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  removed_at  TEXT,
+  removed_by  INTEGER REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_allergies_patient ON allergies(patient_id);
+
+-- nurse screening before the doctor: one row per visit, re-measuring overwrites (audit_log keeps each save)
+CREATE TABLE IF NOT EXISTS vitals (
+  visit_id    INTEGER PRIMARY KEY REFERENCES visits(id),
+  sbp         INTEGER,  -- mmHg
+  dbp         INTEGER,
+  pulse       INTEGER,  -- /min
+  rr          INTEGER,  -- /min
+  temp        REAL,     -- °C
+  spo2        INTEGER,  -- %
+  weight      REAL,     -- kg
+  height      REAL,     -- cm
+  cc          TEXT,     -- chief complaint
+  recorded_by INTEGER NOT NULL REFERENCES users(id),
+  recorded_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
 CREATE TABLE IF NOT EXISTS outlabs (

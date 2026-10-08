@@ -30,7 +30,7 @@ export default async function LabelsPage({ params }: PageProps<"/lab/labels/[ord
   return (
     <div className="space-y-4">
       <BackLink href="/lab/collect">กลับไปหน้ารอเก็บ</BackLink>
-      <LabSteps current="collect" />
+      <LabSteps current="collect" back={false} />
       <div className="no-print flex items-center gap-3">
         <h1 className="text-xl font-semibold">ฉลากหลอดเลือด · Order #{orderId}</h1>
         <PrintButton label="พิมพ์ฉลาก" />

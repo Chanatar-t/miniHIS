@@ -102,3 +102,29 @@ test("isValidCid", () => {
   assert.ok(!isValidCid("12345"));
   assert.ok(!isValidCid("abcdefghijklm"));
 });
+
+test("bmi + vitalAlerts", async () => {
+  const { bmi, bmiLabel, vitalAlerts } = await import("../src/lib/rules.ts");
+  assert.equal(bmi(70, 170), 24.2);
+  assert.equal(bmi(null, 170), null);
+  assert.equal(bmiLabel(22.9), "ปกติ");
+  assert.equal(bmiLabel(23), "น้ำหนักเกิน");
+  assert.equal(bmiLabel(25), "อ้วน");
+  const none = { sbp: null, dbp: null, pulse: null, rr: null, temp: null, spo2: null };
+  assert.deepEqual(vitalAlerts(none), []);
+  assert.deepEqual(vitalAlerts({ ...none, sbp: 120, dbp: 80, temp: 36.8, spo2: 98, pulse: 80, rr: 16 }), []);
+  assert.deepEqual(vitalAlerts({ ...none, sbp: 150, dbp: 85 }), ["ความดันสูง"]);
+  assert.deepEqual(vitalAlerts({ ...none, sbp: 130, dbp: 112 }), ["ความดันสูงมาก"]);
+  assert.deepEqual(vitalAlerts({ ...none, sbp: 85, dbp: 50, temp: 38.2, spo2: 92 }), ["ความดันต่ำ", "มีไข้", "SpO2 ต่ำ"]);
+});
+
+test("vitalsErrors", async () => {
+  const { vitalsErrors } = await import("../src/lib/rules.ts");
+  assert.deepEqual(vitalsErrors({ sbp: "120", dbp: "80", temp: "36.8" }, true), {});
+  assert.deepEqual(vitalsErrors({ sbp: "", dbp: "" }, true), {});
+  assert.ok(vitalsErrors({ sbp: "1200", dbp: "80" }).sbp?.includes("50–300"));
+  assert.ok(vitalsErrors({ sbp: "80", dbp: "120" }).dbp?.includes("สลับช่อง"));
+  assert.deepEqual(vitalsErrors({ sbp: "120" }), {}); // still typing: no nag yet
+  assert.ok(vitalsErrors({ sbp: "120" }, true).dbp?.includes("ครบ"));
+  assert.equal(vitalsErrors({ temp: "abc" }).temp, "ต้องเป็นตัวเลข");
+});

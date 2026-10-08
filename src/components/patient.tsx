@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SCHEME, VISIT_STATUS, age, queueNo } from "@/lib/labels";
 import type { TodayVisit } from "@/lib/visits";
+import { bmi, bmiLabel, vitalAlerts } from "@/lib/rules";
 
 // One back button style everywhere: pill with a chevron, says where it goes
 export function BackLink({ href, children }: { href: string; children: React.ReactNode }) {
@@ -34,7 +35,7 @@ export function Avatar({ name, sex, size = "md" }: { name: string; sex: string; 
 export const fullName = (p: { prefix: string; first_name: string; last_name: string }) => `${p.prefix}${p.first_name} ${p.last_name}`;
 
 // "Visit วันนี้" list shared by the front desk and the doctor
-export function TodayList({ visits, highlight, action }: { visits: TodayVisit[]; highlight?: string; action?: "order" }) {
+export function TodayList({ visits, highlight, action }: { visits: TodayVisit[]; highlight?: string; action?: "order" | "vitals" }) {
   if (visits.length === 0)
     return (
       <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
@@ -69,8 +70,48 @@ export function TodayList({ visits, highlight, action }: { visits: TodayVisit[];
               สั่ง Lab
             </Link>
           )}
+          {action === "vitals" && (
+            <Link href={`/patients/${v.hn}`} className={`${v.status === "WAIT_SCREEN" ? "btn" : "btn-ghost"} whitespace-nowrap`}>
+              ซักประวัติ
+            </Link>
+          )}
         </li>
       ))}
     </ul>
+  );
+}
+
+export type VitalsRow = {
+  sbp: number | null; dbp: number | null; pulse: number | null; rr: number | null; temp: number | null; spo2: number | null;
+  weight: number | null; height: number | null; cc: string | null;
+};
+
+// One line of vital signs + red chips for what's out of range (screening cues only)
+export function VitalsLine({ v }: { v: VitalsRow }) {
+  const b = bmi(v.weight, v.height);
+  const parts = [
+    v.sbp !== null && `BP ${v.sbp}/${v.dbp}`,
+    v.pulse !== null && `P ${v.pulse}`,
+    v.rr !== null && `RR ${v.rr}`,
+    v.temp !== null && `T ${v.temp}°C`,
+    v.spo2 !== null && `SpO2 ${v.spo2}%`,
+    v.weight !== null && `นน. ${v.weight} kg`,
+    v.height !== null && `สส. ${v.height} cm`,
+    b !== null && `BMI ${b} (${bmiLabel(b)})`,
+  ].filter(Boolean);
+  return (
+    <div className="space-y-1 text-sm">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {parts.map((p) => (
+          <span key={String(p)}>{p}</span>
+        ))}
+        {vitalAlerts(v).map((a) => (
+          <span key={a} className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+            {a}
+          </span>
+        ))}
+      </div>
+      {v.cc && <div className="text-slate-600">อาการสำคัญ: {v.cc}</div>}
+    </div>
   );
 }

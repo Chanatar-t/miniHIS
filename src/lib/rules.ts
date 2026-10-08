@@ -116,3 +116,60 @@ export function cidCheckDigit(first12: string): string {
   for (let i = 0; i < 12; i++) sum += Number(first12[i]) * (13 - i);
   return String((11 - (sum % 11)) % 10);
 }
+
+// BMI (kg/m²), 1 decimal; null when weight or height wasn't measured
+export function bmi(weight: number | null, height: number | null): number | null {
+  if (!weight || !height) return null;
+  return Math.round((weight / (height / 100) ** 2) * 10) / 10;
+}
+
+// Asia-Pacific cut-offs (WHO 2000), used by Thai clinics: overweight from 23, obese from 25
+export function bmiLabel(b: number): string {
+  return b < 18.5 ? "น้ำหนักน้อย" : b < 23 ? "ปกติ" : b < 25 ? "น้ำหนักเกิน" : "อ้วน";
+}
+
+// Screening cues for the doctor, not a diagnosis. Adult thresholds.
+export type Vitals = { sbp: number | null; dbp: number | null; pulse: number | null; rr: number | null; temp: number | null; spo2: number | null };
+export function vitalAlerts(v: Vitals): string[] {
+  const a: string[] = [];
+  const { sbp, dbp } = v;
+  if ((sbp ?? 0) >= 180 || (dbp ?? 0) >= 110) a.push("ความดันสูงมาก");
+  else if ((sbp ?? 0) >= 140 || (dbp ?? 0) >= 90) a.push("ความดันสูง");
+  else if (sbp !== null && sbp < 90) a.push("ความดันต่ำ");
+  if (v.temp !== null && v.temp >= 37.5) a.push("มีไข้");
+  if (v.spo2 !== null && v.spo2 < 95) a.push("SpO2 ต่ำ");
+  if (v.pulse !== null && (v.pulse > 120 || v.pulse < 50)) a.push("ชีพจรผิดปกติ");
+  if (v.rr !== null && (v.rr > 24 || v.rr < 10)) a.push("หายใจผิดปกติ");
+  return a;
+}
+
+// Vital-sign fields: one list drives the form, the live hints and the server check
+export type VitalKey = "sbp" | "dbp" | "pulse" | "rr" | "temp" | "spo2" | "weight" | "height";
+export const VITAL_FIELDS: { key: VitalKey; label: string; unit: string; min: number; max: number; step: number; normal?: [number, number]; hint: string }[] = [
+  { key: "sbp", label: "ความดันตัวบน", unit: "mmHg", min: 50, max: 300, step: 1, normal: [90, 139], hint: "ปกติ 90–139" },
+  { key: "dbp", label: "ความดันตัวล่าง", unit: "mmHg", min: 20, max: 200, step: 1, normal: [60, 89], hint: "ปกติ 60–89" },
+  { key: "pulse", label: "ชีพจร", unit: "ครั้ง/นาที", min: 20, max: 250, step: 1, normal: [60, 100], hint: "ปกติ 60–100" },
+  { key: "rr", label: "การหายใจ", unit: "ครั้ง/นาที", min: 4, max: 80, step: 1, normal: [12, 20], hint: "ปกติ 12–20" },
+  { key: "temp", label: "อุณหภูมิ", unit: "°C", min: 30, max: 45, step: 0.1, normal: [36, 37.4], hint: "ปกติ 36.0–37.4" },
+  { key: "spo2", label: "SpO2", unit: "%", min: 50, max: 100, step: 1, normal: [95, 100], hint: "ปกติ 95 ขึ้นไป" },
+  { key: "weight", label: "น้ำหนัก", unit: "kg", min: 0.5, max: 400, step: 0.1, hint: "เช่น 60.5" },
+  { key: "height", label: "ส่วนสูง", unit: "cm", min: 30, max: 250, step: 0.1, hint: "เช่น 165" },
+];
+
+// Field -> message for raw form text. Live (while typing) skips "fill both BP fields", which is only an error on save.
+export function vitalsErrors(raw: Partial<Record<VitalKey, string>>, onSave = false): Partial<Record<VitalKey, string>> {
+  const e: Partial<Record<VitalKey, string>> = {};
+  const num = (k: VitalKey) => (raw[k]?.trim() ? Number(raw[k]) : null);
+  for (const f of VITAL_FIELDS) {
+    const v = num(f.key);
+    if (v === null) continue;
+    if (!Number.isFinite(v)) e[f.key] = "ต้องเป็นตัวเลข";
+    else if (v < f.min || v > f.max) e[f.key] = `ต้องอยู่ระหว่าง ${f.min}–${f.max} พิมพ์เกินหรือเปล่า?`;
+  }
+  const sbp = num("sbp"), dbp = num("dbp");
+  if (!e.sbp && !e.dbp) {
+    if (sbp !== null && dbp !== null && dbp >= sbp) e.dbp = "ต้องน้อยกว่าตัวบน กรอกสลับช่องหรือเปล่า?";
+    else if (onSave && (sbp === null) !== (dbp === null)) e[sbp === null ? "sbp" : "dbp"] = "กรอกความดันให้ครบทั้งตัวบนและตัวล่าง";
+  }
+  return e;
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { BackLink } from "@/components/patient";
 
 // The lab is a conveyor belt; this bar shows where the work is waiting.
 // Rendered by each lab page (not a layout) so the counts refresh on every navigation.
@@ -32,10 +33,15 @@ export function labCounts(): Record<LabStep, number> & { critical: number; await
   };
 }
 
-export function LabSteps({ current }: { current: LabStep }) {
+// Header of every lab page: back to the overview + the step bar.
+// current = undefined on the /lab overview itself (no step highlighted, no back link).
+// back={false} on detail pages that already link back to their own step (labels, one shipment).
+export function LabSteps({ current, back = true }: { current?: LabStep; back?: boolean }) {
   const c = labCounts();
   return (
-    <nav aria-label="ขั้นตอนงาน Lab" className="no-print overflow-x-auto">
+    <div className="no-print space-y-3">
+    {current && back && <BackLink href="/lab">ภาพรวมงาน Lab</BackLink>}
+    <nav aria-label="ขั้นตอนงาน Lab" className="overflow-x-auto">
       <ol className="flex min-w-[720px] items-stretch gap-1">
         {LAB_STEPS.map((s, i) => {
           const active = s.key === current;
@@ -73,5 +79,6 @@ export function LabSteps({ current }: { current: LabStep }) {
         })}
       </ol>
     </nav>
+    </div>
   );
 }

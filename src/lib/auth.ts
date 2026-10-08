@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { db, audit } from "./db";
 
-export type Role = "CLERK" | "DOCTOR" | "LAB" | "ADMIN";
+export type Role = "CLERK" | "NURSE" | "DOCTOR" | "LAB" | "ADMIN";
 // canApprove: permission on top of the role (e.g. a pathologist who is LAB and may approve reference ranges)
 export type User = { id: number; username: string; name: string; role: Role; canApprove: number };
 

@@ -57,6 +57,7 @@ export const queueNo = (vn: string) => Number(vn.slice(-4));
 
 // what a visit is waiting for, in front-desk words
 export const VISIT_STATUS: Record<string, { label: string; cls: string }> = {
+  WAIT_SCREEN: { label: "รอซักประวัติ", cls: "bg-amber-100 text-amber-800" },
   NO_ORDER: { label: "รอพบแพทย์", cls: "bg-sky-100 text-sky-800" },
   ...ORDER_STATUS,
 };
