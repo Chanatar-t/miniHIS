@@ -77,12 +77,12 @@ details[open]::details-content {
   block-size: auto;
 }
 
-/* Page navigation (React <ViewTransition default="page"> in the root layout): old content fades up and out, new rises in.
-   The header has its own name so it stays perfectly still. */
-::view-transition-old(.page) {
+/* Page navigation (PageTransition: <ViewTransition key={path} enter="page-in" exit="page-out">): old content fades
+   up and out, new rises in. The header and an open modal have their own names so they never get painted over. */
+::view-transition-old(.page-out) {
   animation: page-out 0.12s ease-in both;
 }
-::view-transition-new(.page) {
+::view-transition-new(.page-in) {
   animation: page-in 0.26s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s both; /* starts as the old page is gone: no overlapping text */
 }
 ::view-transition-group(site-header) {
@@ -100,6 +100,22 @@ details[open]::details-content {
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
+}
+/* an open modal is its own layer: stays on top, and fades out quickly if a save navigates away */
+::view-transition-group(register-modal) {
+  z-index: 90;
+}
+/* After a successful save that navigates: keep the modal (with its dim, which the snapshot lacks: faked by a
+   huge shadow) fully opaque while the old page leaves, then remove it in one step as the new page fades in.
+   A cross-fade here looked like the form melting into the list behind it. */
+::view-transition-old(register-modal) {
+  animation: hold-then-hide 0.12s linear forwards;
+  border-radius: 1rem;
+  box-shadow: 0 0 0 200vmax rgb(15 23 42 / 0.5);
+}
+@keyframes hold-then-hide {
+  0%, 99.9% { opacity: 1; }
+  100% { opacity: 0; }
 }
 /* clicks during a transition reach the live page */
 ::view-transition {

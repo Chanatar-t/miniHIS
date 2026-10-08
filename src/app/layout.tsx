@@ -1,10 +1,9 @@
-import { ViewTransition } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
 import { currentUser, logout, type Role } from "@/lib/auth";
-import { NavLink } from "@/components/client";
+import { NavLink, PageTransition } from "@/components/client";
 import "./globals.css";
 
 const font = IBM_Plex_Sans_Thai({
@@ -62,10 +61,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </div>
           </header>
         )}
-        {/* page transition on navigation; live search (type "search") updates in place without it */}
-        <ViewTransition default={{ search: "none", default: "page" }}>
-          <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
-        </ViewTransition>
+        <main className="mx-auto max-w-6xl px-4 py-6">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </body>
     </html>
   );

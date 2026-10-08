@@ -9,7 +9,13 @@ import { isValidCid } from "@/lib/rules";
 export type FormState = { error?: string; fields?: Record<string, string> };
 
 const PatientInput = z.object({
-  cid: z.string().trim().refine(isValidCid, "เลขบัตรประชาชนไม่ถูกต้อง (checksum ไม่ผ่าน)"),
+  cid: z
+    .string()
+    .trim()
+    .refine(
+      isValidCid,
+      "เลขบัตรประชาชนไม่ถูกต้อง: หลักสุดท้ายเป็นเลขตรวจสอบที่คำนวณจาก 12 หลักแรก และไม่ตรงกัน อาจพิมพ์ผิดหรือสลับหลัก กรุณาตรวจกับบัตรอีกครั้ง",
+    ),
   prefix: z.enum(["นาย", "นาง", "นางสาว", "ด.ช.", "ด.ญ."]),
   first_name: z.string().trim().min(1, "กรอกชื่อ"),
   last_name: z.string().trim().min(1, "กรอกนามสกุล"),

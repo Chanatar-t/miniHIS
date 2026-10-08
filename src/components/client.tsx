@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, ViewTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import JsBarcode from "jsbarcode";
@@ -22,9 +22,20 @@ export function LiveSearch({ defaultValue, placeholder }: { defaultValue: string
       onChange={(e) => {
         const q = e.target.value;
         clearTimeout(timer.current);
-        timer.current = setTimeout(() => router.replace(q ? `?q=${encodeURIComponent(q)}` : "?", { scroll: false, transitionTypes: ["search"] }), 250);
+        timer.current = setTimeout(() => router.replace(q ? `?q=${encodeURIComponent(q)}` : "?", { scroll: false }), 250);
       }}
     />
+  );
+}
+
+// Page transition only when the PATH changes (real navigation). Same-path updates — a form action returning an
+// error, live search (?q=), paging — re-render in place with no animation, so nothing flickers behind a modal.
+export function PageTransition({ children }: { children: React.ReactNode }) {
+  const path = usePathname();
+  return (
+    <ViewTransition key={path} enter="page-in" exit="page-out" default="none">
+      {children}
+    </ViewTransition>
   );
 }
 

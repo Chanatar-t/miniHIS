@@ -78,6 +78,8 @@ export function RegisterModal({ initial, children, className }: { initial: Recor
       <dialog
         ref={dialog}
         aria-labelledby="reg-title"
+        // own view-transition layer: never painted over by the page, fades out if a save navigates away
+        style={{ viewTransitionName: "register-modal" }}
         className="m-auto w-[min(36rem,calc(100vw-2rem))] rounded-2xl bg-transparent p-0 backdrop:bg-slate-900/50 backdrop:backdrop-blur-sm"
         // the dialog element itself only receives clicks on the backdrop (content fills it)
         onClick={(e) => {
