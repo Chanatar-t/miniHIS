@@ -94,6 +94,8 @@ async function main() {
   ok(/^VN\d{10}$/.test(vn), `visit opened from patient page ${vn}`);
 
   console.log("# front desk");
+  const deskForms = forms(await html("/patients", clerk));
+  ok(deskForms.filter(isVisitForm).length >= 10, "desk lists recent patients with open-visit buttons before typing");
   ok((await html("/patients?q=HN9999999", clerk)).includes("ไม่พบผู้ป่วย") && (await html("/patients?q=1100000000024", clerk)).includes("/patients/new?cid=1100000000024"), "not found -> register link pre-filled with the typed CID");
   ok((await html("/patients/new?cid=1100000000024", clerk)).includes('value="1100000000024"'), "registration form pre-filled");
   r = await submit("/patients?q=HN0000005", clerk, isVisitForm, { scheme: "SSS" });

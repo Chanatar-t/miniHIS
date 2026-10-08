@@ -16,16 +16,16 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
   const q = String(sp.q ?? "").trim();
   const isClerk = user.role === "CLERK";
 
+  // No search yet: show recent patients (latest visit or registration first) so the list is ready to click.
   // ponytail: LIKE scan, fine for thousands of rows; FTS5 / pg_trgm when it gets slow
-  const rows = q
-    ? (db
-        .prepare(
-          `SELECT id, hn, cid, prefix, first_name, last_name, dob, sex, phone FROM patients
-           WHERE hn = ? OR cid = ? OR first_name || ' ' || last_name LIKE ? OR phone = ?
-           ORDER BY id DESC LIMIT 20`,
-        )
-        .all(q.toUpperCase(), q, `%${q}%`, q) as Row[])
-    : [];
+  const rows = db
+    .prepare(
+      `SELECT p.id, p.hn, p.cid, p.prefix, p.first_name, p.last_name, p.dob, p.sex, p.phone FROM patients p
+       WHERE ? = '' OR p.hn = ? OR p.cid = ? OR p.first_name || ' ' || p.last_name LIKE ? OR p.phone = ?
+       ORDER BY coalesce((SELECT max(v.id) FROM visits v WHERE v.patient_id = p.id), 0) DESC, p.id DESC
+       LIMIT 20`,
+    )
+    .all(q, q.toUpperCase(), q, `%${q}%`, q) as Row[];
   const today = todayVisits();
   const visitToday = new Map(today.map((v) => [v.patient_id, v]));
   const opened = typeof sp.opened === "string" ? today.find((v) => v.vn === sp.opened) : undefined;
@@ -77,7 +77,9 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
             <LiveSearch key={opened?.vn ?? existed?.vn ?? "search"} defaultValue={q} placeholder="เช่น HN0000001, 1100000000016, สมชาย" />
           </form>
 
-          {!q && <p className="px-1 text-sm text-slate-500">เริ่มพิมพ์เพื่อค้นหา หรือดูผู้ป่วยที่เปิด Visit แล้วทางขวา</p>}
+          <p className="px-1 text-sm text-slate-500">
+            {q ? `ผลการค้นหา “${q}” ${rows.length} คน` : "ผู้ป่วยล่าสุด 20 คน (มาล่าสุดอยู่บน) พิมพ์ด้านบนเพื่อค้นหาคนอื่น"}
+          </p>
 
           {q && rows.length === 0 && (
             <div className="card space-y-3 text-center">
