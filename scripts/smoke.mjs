@@ -374,6 +374,14 @@ async function main() {
   await post("/config/K", path, forms(await html("/config/K", path)).find((f) => f.includes(`name="rangeId" value="${kr}"`)), { decision: "APPROVED" });
   ok(one("SELECT active FROM lab_tests WHERE id = ?", kTest.id).active === 1 && (await html(`/visits/${vnF}/order`, doc)).includes("Potassium"), "approving its first range makes K orderable");
 
+  console.log("# project pages");
+  const lg = await html("/login");
+  ok(lg.includes("Mini HIS · LIS Outlab") && lg.includes('href="/about"') && lg.includes("อนุมัติค่าอ้างอิง"), "login page explains the project, links to the structure page");
+  const ab = await get("/about");
+  const abHtml = (await ab.text()).replaceAll("<!-- -->", "");
+  ok(ab.status === 200 && ["lab_order_items", "test_ranges", "→ lab_orders.id", "/lab/verify", "Database schema"].every((s) => abHtml.includes(s)), "/about is public and shows live schema, routes and stack");
+  ok(!abHtml.includes("1100000000008") && !abHtml.includes("นายก ข"), "/about exposes no patient data");
+
   console.log("# not found");
   g = await get("/patients/HN9999999", doc);
   ok(g.status === 404 && (await g.text()).includes("ไม่พบข้อมูล"), "unknown HN -> Thai 404");
