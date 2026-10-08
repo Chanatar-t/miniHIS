@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { flagResult, isValidCid, cidCheckDigit, groupIntoTubes } from "../src/lib/rules.ts";
+import { flagResult, isValidCid, cidCheckDigit, groupIntoTubes, ungroundedNumbers } from "../src/lib/rules.ts";
 
 const glucose = { ref_low: 70, ref_high: 100, crit_low: 40, crit_high: 500 };
 
@@ -26,6 +26,12 @@ test("groupIntoTubes", () => {
     { id: "HBA1C", specimen_type: "Whole blood", container: "Lavender top (EDTA)", outlab_id: 1 },
   ]);
   assert.deepEqual(tubes.map((t) => t.map((i) => i.id)), [["TSH", "FT4"], ["VITD"], ["CREA"], ["HBA1C"]]);
+});
+
+test("ungroundedNumbers", () => {
+  const src = JSON.stringify({ results: [{ test: "HBA1C", value: "7.20", ref: "4 - 6" }] });
+  assert.deepEqual(ungroundedNumbers("HbA1c 7.2 สูงกว่า 6", src), []);
+  assert.deepEqual(ungroundedNumbers("HbA1c 8.1 สูงกว่า 6", src), ["8.1"]);
 });
 
 test("isValidCid", () => {

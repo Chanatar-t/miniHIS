@@ -23,6 +23,7 @@ const NAV: { href: string; label: string; roles: Role[] }[] = [
   { href: "/lab/shipments", label: "ส่ง Outlab", roles: ["LAB"] },
   { href: "/lab/results", label: "ลงผล", roles: ["LAB"] },
   { href: "/lab/verify", label: "Verify", roles: ["LAB"] },
+  { href: "/admin/audit", label: "Audit log", roles: ["ADMIN"] },
 ];
 
 async function signOut() {

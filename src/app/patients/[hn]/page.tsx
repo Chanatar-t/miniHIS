@@ -4,6 +4,7 @@ import { db, audit } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { SCHEME, ITEM_STATUS, FLAG, age } from "@/lib/labels";
 import { openVisit } from "../actions";
+import { AiSummaryCard } from "./ai-card";
 
 type Patient = {
   id: number; hn: string; cid: string; prefix: string; first_name: string; last_name: string;
@@ -62,6 +63,8 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
         <div className="font-mono text-sm">{p.cid}</div>
         {p.phone && <div className="text-sm">โทร {p.phone}</div>}
       </div>
+
+      {user.role === "DOCTOR" && <AiSummaryCard patientId={p.id} />}
 
       {user.role === "CLERK" && (
         <form action={openVisit} className="card flex items-end gap-2">

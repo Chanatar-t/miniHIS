@@ -15,7 +15,8 @@ const dir = mkdtempSync(path.join(tmpdir(), "his-smoke-"));
 const DB_FILE = path.join(dir, "his.db");
 
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(PORT)], {
-  env: { ...process.env, DB_FILE, SESSION_SECRET: SECRET, NODE_NO_WARNINGS: "1" },
+  // AI points at a dead port: the test exercises the fallback path and never spends API credits
+  env: { ...process.env, DB_FILE, SESSION_SECRET: SECRET, NODE_NO_WARNINGS: "1", ANTHROPIC_API_KEY: "smoke", ANTHROPIC_BASE_URL: "http://127.0.0.1:9" },
   stdio: ["ignore", "ignore", "inherit"],
 });
 // wait for the server to exit before deleting its DB (Windows keeps the file locked)
@@ -218,6 +219,22 @@ async function main() {
   const am = one("SELECT old_value, new_value FROM result_amendments WHERE item_id = 1");
   ok(am?.old_value === oldTsh && am.new_value === "2.1" && one("SELECT flag FROM lab_order_items WHERE id = 1").flag === "N", `amend TSH ${oldTsh} -> 2.1, old kept, re-flagged N`);
   ok((await get("/reports/1", clerk)).headers.get("location")?.endsWith("/forbidden"), "clerk cannot open lab report");
+
+  console.log("# AI summary & audit");
+  const aiForm = forms(await html("/patients/HN0000031", doc)).find((f) => f.includes("สรุปด้วย AI"));
+  ok(aiForm, "doctor sees AI summary button");
+  ok(!(await html("/patients/HN0000031", lab)).includes("สรุปด้วย AI"), "lab does not");
+  const aiBody = new FormData();
+  for (const [n, v] of hidden(aiForm)) aiBody.append(n, v);
+  // useActionState form without JS: Next re-renders the page with the action's returned state
+  const aiRes = await fetch(`${B}/patients/HN0000031`, { method: "POST", body: aiBody, headers: { cookie: doc, origin: B } });
+  const aiHtml = (await aiRes.text()).replaceAll("<!-- -->", "");
+  ok(aiHtml.includes("สรุปแบบกฎ") && aiHtml.includes("CREA"), "AI unavailable -> rule-based summary still shown");
+  const aiAudit = one("SELECT detail FROM audit_log WHERE action = 'AI_SUMMARY'");
+  ok(aiAudit && !aiAudit.detail.includes("HN") && aiAudit.detail.includes("4 results"), "AI use audited without patient content: " + aiAudit?.detail);
+  const audit = await html("/admin/audit?hn=HN0000031", ck(4));
+  ok(audit.includes("AI_SUMMARY") && audit.includes("VIEW") && !audit.includes("HN0000002"), "admin filters audit by patient HN");
+  ok((await get("/admin/audit", doc)).headers.get("location")?.endsWith("/forbidden"), "doctor cannot open audit log");
 
   console.log("# not found");
   g = await get("/patients/HN9999999", doc);

@@ -33,6 +33,14 @@ export function groupIntoTubes<T extends { specimen_type: string; container: str
   return [...tubes.values()];
 }
 
+// AI guardrail: numbers in the generated text that never appear in the source data (hallucinated values).
+// Compares numerically so "7.20" matches "7.2".
+export function ungroundedNumbers(output: string, source: string): string[] {
+  const nums = (s: string) => s.match(/\d+(?:\.\d+)?/g) ?? [];
+  const known = new Set(nums(source).map(Number));
+  return [...new Set(nums(output))].filter((n) => !known.has(Number(n)));
+}
+
 // Thai national ID: 13 digits, last digit = (11 - sum(d[i] * (13 - i)) % 11) % 10
 export function isValidCid(cid: string): boolean {
   if (!/^\d{13}$/.test(cid)) return false;
