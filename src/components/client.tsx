@@ -41,14 +41,18 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
 }
 
 // top-nav link that shows where you are
-export function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+// header (dark bar) nav item: active = white pill
+export function NavLink({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
   const path = usePathname();
   const active = path === href || path.startsWith(`${href}/`);
   return (
     <Link
       href={href}
+      title={label}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 ${active ? "bg-teal-50 font-medium text-teal-800" : "text-slate-600 hover:bg-slate-50 hover:text-teal-700"} transition-colors duration-150`}
+      className={`relative inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 transition duration-150 ${
+        active ? "bg-white font-medium text-teal-800 shadow-sm" : "text-teal-50/90 hover:bg-white/10 hover:text-white"
+      }`}
     >
       {children}
     </Link>

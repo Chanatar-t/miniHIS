@@ -38,6 +38,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 4.5rem; /* anchors land below the sticky header */
   interpolate-size: allow-keywords; /* lets <details> animate to height:auto (Chromium; others just snap) */
 }
 
