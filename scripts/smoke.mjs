@@ -97,6 +97,12 @@ async function main() {
   const deskForms = forms(await html("/patients", clerk));
   const deskRows = ((await html("/patients", clerk)).match(/class="card flex flex-wrap items-center gap-4"/g) ?? []).length;
   ok(deskRows === 10 && deskForms.filter(isVisitForm).length >= 5, `desk lists 10 recent patients before typing (got ${deskRows})`);
+  const rowsOf = (h) => [...h.matchAll(/class="text-lg[^"]*" href="\/patients\/(HN\d{7})"/g)].map((m) => m[1]);
+  const [p1, p2, p4, p99] = await Promise.all(["", "?page=2", "?page=4", "?page=99"].map((s) => html(`/patients${s}`, clerk)));
+  ok(rowsOf(p2).length === 10 && !rowsOf(p2).some((hn) => rowsOf(p1).includes(hn)), "page 2 shows the next 10, no overlap");
+  ok(rowsOf(p4).length === 1 && p4.includes("แสดง 31–31 จาก 31 คน") && rowsOf(p99).join() === rowsOf(p4).join(), "last page has the remainder; out-of-range page clamps to last");
+  const qp = await html("/patients?q=%E0%B8%AA&page=2", clerk); // "ส" matches more than one page
+  ok(qp.includes('href="/patients?q=%E0%B8%AA"') && qp.includes('aria-current="page"'), "paging keeps the search text");
   ok((await html("/patients?q=HN9999999", clerk)).includes("ไม่พบผู้ป่วย") && (await html("/patients?q=1100000000024", clerk)).includes("/patients/new?cid=1100000000024"), "not found -> register link pre-filled with the typed CID");
   ok((await html("/patients/new?cid=1100000000024", clerk)).includes('value="1100000000024"'), "registration form pre-filled");
   r = await submit("/patients?q=HN0000005", clerk, isVisitForm, { scheme: "SSS" });

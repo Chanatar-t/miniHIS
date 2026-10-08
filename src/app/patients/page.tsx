@@ -16,16 +16,20 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
   const q = String(sp.q ?? "").trim();
   const isClerk = user.role === "CLERK";
 
-  // No search yet: show recent patients (latest visit or registration first) so the list is ready to click.
-  // ponytail: LIKE scan, fine for thousands of rows; FTS5 / pg_trgm when it gets slow
+  // No search yet: list everyone, recent first (latest visit, then newest registration), 10 per page.
+  // ponytail: LIKE scan + OFFSET paging, fine for thousands of rows; FTS5 / keyset paging when it gets slow
+  const where = `WHERE ? = '' OR p.hn = ? OR p.cid = ? OR p.first_name || ' ' || p.last_name LIKE ? OR p.phone = ?`;
+  const args = [q, q.toUpperCase(), q, `%${q}%`, q];
+  const total = (db.prepare(`SELECT COUNT(*) AS n FROM patients p ${where}`).get(...args) as { n: number }).n;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(pages, Math.max(1, Number(sp.page) || 1));
   const rows = db
     .prepare(
-      `SELECT p.id, p.hn, p.cid, p.prefix, p.first_name, p.last_name, p.dob, p.sex, p.phone FROM patients p
-       WHERE ? = '' OR p.hn = ? OR p.cid = ? OR p.first_name || ' ' || p.last_name LIKE ? OR p.phone = ?
+      `SELECT p.id, p.hn, p.cid, p.prefix, p.first_name, p.last_name, p.dob, p.sex, p.phone FROM patients p ${where}
        ORDER BY coalesce((SELECT max(v.id) FROM visits v WHERE v.patient_id = p.id), 0) DESC, p.id DESC
-       LIMIT 10`,
+       LIMIT ? OFFSET ?`,
     )
-    .all(q, q.toUpperCase(), q, `%${q}%`, q) as Row[];
+    .all(...args, PAGE_SIZE, (page - 1) * PAGE_SIZE) as Row[];
   const today = todayVisits();
   const visitToday = new Map(today.map((v) => [v.patient_id, v]));
   const opened = typeof sp.opened === "string" ? today.find((v) => v.vn === sp.opened) : undefined;
@@ -78,7 +82,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
           </form>
 
           <p className="px-1 text-sm text-slate-500">
-            {q ? `ผลการค้นหา “${q}” ${rows.length} คน` : "ผู้ป่วยล่าสุด 10 คน (มาล่าสุดอยู่บน) พิมพ์ด้านบนเพื่อค้นหาคนอื่น"}
+            {total === 0 ? "" : `${q ? `ผลการค้นหา “${q}”` : "ผู้ป่วยทั้งหมด (มาล่าสุดอยู่บน)"} · แสดง ${(page - 1) * PAGE_SIZE + 1}–${(page - 1) * PAGE_SIZE + rows.length} จาก ${total} คน`}
           </p>
 
           {q && rows.length === 0 && (
@@ -135,6 +139,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
               );
             })}
           </ul>
+          <Pager page={page} pages={pages} q={q} />
         </section>
 
         {/* today */}
@@ -152,3 +157,44 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
 
 // PDPA: lists show a masked national ID; the full value only on the patient page
 const maskCid = (c: string) => `${c.slice(0, 1)}-XXXX-XXXXX-${c.slice(10, 12)}-${c.slice(12)}`;
+
+const PAGE_SIZE = 10;
+
+// ‹ 1 2 3 … › links; keeps the search text, works without JS
+function Pager({ page, pages, q }: { page: number; pages: number; q: string }) {
+  if (pages <= 1) return null;
+  const href = (p: number) => `/patients?${new URLSearchParams({ ...(q && { q }), ...(p > 1 && { page: String(p) }) })}`;
+  // show first, last, and 2 around the current page
+  const nums = [...new Set([1, page - 2, page - 1, page, page + 1, page + 2, pages])].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
+  const base = "flex h-9 min-w-9 items-center justify-center rounded-md border px-3 text-sm";
+  return (
+    <nav aria-label="เลือกหน้า" className="flex flex-wrap items-center justify-center gap-1 pt-2">
+      {page > 1 ? (
+        <Link href={href(page - 1)} className={`${base} border-slate-300 bg-white hover:bg-slate-50`}>
+          ‹ ก่อนหน้า
+        </Link>
+      ) : (
+        <span className={`${base} border-slate-200 text-slate-300`}>‹ ก่อนหน้า</span>
+      )}
+      {nums.map((n, i) => (
+        <span key={n} className="flex items-center gap-1">
+          {i > 0 && n - nums[i - 1] > 1 && <span className="px-1 text-slate-400">…</span>}
+          <Link
+            href={href(n)}
+            aria-current={n === page ? "page" : undefined}
+            className={`${base} ${n === page ? "border-teal-600 bg-teal-600 font-semibold text-white" : "border-slate-300 bg-white hover:bg-slate-50"}`}
+          >
+            {n}
+          </Link>
+        </span>
+      ))}
+      {page < pages ? (
+        <Link href={href(page + 1)} className={`${base} border-slate-300 bg-white hover:bg-slate-50`}>
+          ถัดไป ›
+        </Link>
+      ) : (
+        <span className={`${base} border-slate-200 text-slate-300`}>ถัดไป ›</span>
+      )}
+    </nav>
+  );
+}
