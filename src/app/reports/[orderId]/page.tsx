@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { db, audit } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
-import { FLAG, ITEM_STATUS, SCHEME, age, isCritical, refRange } from "@/lib/labels";
+import { FLAG, ITEM_STATUS, ORDER_STATUS, SCHEME, age, isCritical, refRange } from "@/lib/labels";
+import { orderStatus } from "@/lib/rules";
 import { Flash } from "@/components/flash";
 import { PrintButton } from "@/components/client";
 import { amendResult } from "@/app/lab/results/actions";
@@ -77,6 +78,9 @@ export default async function ReportPage({ params, searchParams }: PageProps<"/r
           </div>
           <div className="text-right text-sm">
             <div className="font-mono">Order #{h.id}</div>
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ORDER_STATUS[orderStatus(items.map((i) => i.status))].cls}`}>
+              {ORDER_STATUS[orderStatus(items.map((i) => i.status))].label}
+            </span>
             {h.priority === "STAT" && <b className="text-red-600">STAT</b>}
             <div className="text-slate-600">สั่ง {h.ordered_at}</div>
           </div>

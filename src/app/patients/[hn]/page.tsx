@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, audit } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
-import { SCHEME, ITEM_STATUS, FLAG, age } from "@/lib/labels";
+import { SCHEME, ITEM_STATUS, ORDER_STATUS, FLAG, age } from "@/lib/labels";
+import { orderStatus } from "@/lib/rules";
 import { openVisit } from "../actions";
 import { AiSummaryCard } from "./ai-card";
 
@@ -42,6 +43,9 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
        WHERE v.patient_id = ? ORDER BY o.id DESC, i.id`,
     )
     .all(p.id) as Item[];
+  const orderSt = new Map(
+    [...Map.groupBy(items, (i) => i.order_id)].map(([id, its]) => [id, orderStatus(its.map((i) => i.status))]),
+  );
 
   return (
     <div className="space-y-4">
@@ -112,17 +116,27 @@ export default async function PatientPage({ params }: PageProps<"/patients/[hn]"
                   </tr>
                 </thead>
                 <tbody>
-                  {its.map((i) => (
+                  {its.map((i, n) => (
                     <tr key={i.item_id}>
-                      <td className="font-mono text-xs">
-                        {user.role === "DOCTOR" || user.role === "LAB" ? (
-                          <Link href={`/reports/${i.order_id}`} className="text-teal-700 hover:underline">
-                            #{i.order_id}
-                          </Link>
-                        ) : (
-                          `#${i.order_id}`
-                        )}{" "}
-                        {i.priority === "STAT" && <b className="text-red-600">STAT</b>}
+                      {/* order info once, on the first row of each order (rows are sorted by order) */}
+                      <td className="align-top font-mono text-xs">
+                        {its[n - 1]?.order_id !== i.order_id && (
+                          <>
+                            {user.role === "DOCTOR" || user.role === "LAB" ? (
+                              <Link href={`/reports/${i.order_id}`} className="text-teal-700 hover:underline">
+                                #{i.order_id}
+                              </Link>
+                            ) : (
+                              `#${i.order_id}`
+                            )}{" "}
+                            {i.priority === "STAT" && <b className="text-red-600">STAT</b>}
+                            <div className="mt-1">
+                              <span className={`whitespace-nowrap rounded-full px-2 py-0.5 font-sans text-[11px] font-medium ${ORDER_STATUS[orderSt.get(i.order_id)!].cls}`}>
+                                {ORDER_STATUS[orderSt.get(i.order_id)!].label}
+                              </span>
+                            </div>
+                          </>
+                        )}
                       </td>
                       <td>
                         <span className="font-mono">{i.code}</span> {i.name}

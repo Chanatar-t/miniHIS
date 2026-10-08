@@ -208,7 +208,9 @@ async function main() {
   console.log("# report & amend");
   const pt = await html("/patients/HN0000031", doc);
   ok(pt.includes("HH วิกฤต") && pt.includes('href="/reports/1"'), "doctor sees verified critical result + report link");
+  ok((pt.match(/รายงานผลครบ/g) || []).length >= 1, "patient page shows derived order status (order 1 complete)");
   const rep = await html("/reports/1", doc);
+  ok(rep.includes("รายงานผลครบ"), "report header shows order status");
   ok(rep.includes("แจ้ง นพ.ธนา ทางโทรศัพท์") && rep.includes("LOINC 3016-3"), "report shows critical notification and LOINC");
   ok(one("SELECT COUNT(*) n FROM audit_log WHERE action = 'VIEW' AND entity = 'lab_report'").n >= 1, "report view audited");
   const amendForm = forms(await html("/reports/1", lab2)).find((f) => f.includes('name="itemId" value="1"'));
