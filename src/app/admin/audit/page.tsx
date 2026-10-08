@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
+import { AutoSubmitSelect } from "@/components/client";
 
 type Row = { id: number; at: string; user: string | null; role: string | null; action: string; entity: string; entity_id: number | null; detail: string | null; hn: string | null };
 
@@ -34,18 +35,23 @@ export default async function AuditPage({ searchParams }: PageProps<"/admin/audi
       <form className="card flex flex-wrap items-end gap-2">
         <div>
           <label className="label">การกระทำ</label>
-          <select name="action" defaultValue={action} className="input">
+          <AutoSubmitSelect name="action" defaultValue={action} className="input">
             <option value="">ทั้งหมด</option>
             {actions.map((a) => (
               <option key={a}>{a}</option>
             ))}
-          </select>
+          </AutoSubmitSelect>
         </div>
         <div>
           <label className="label">HN ผู้ป่วย (ใครเปิดดูข้อมูลคนนี้บ้าง)</label>
           <input name="hn" defaultValue={hn} className="input font-mono" placeholder="HN0000001" />
         </div>
         <button className="btn">กรอง</button>
+        {(action || hn) && (
+          <a href="/admin/audit" className="btn-ghost">
+            ล้างตัวกรอง
+          </a>
+        )}
       </form>
       <div className="card p-0">
         <table className="table">

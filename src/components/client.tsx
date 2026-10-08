@@ -11,6 +11,11 @@ export function Barcode({ value, height = 40 }: { value: string; height?: number
   return <svg ref={ref} />;
 }
 
+// <select> inside a GET filter form: apply as soon as the value changes (still works as a plain form without JS)
+export function AutoSubmitSelect(props: React.ComponentProps<"select">) {
+  return <select {...props} onChange={(e) => e.currentTarget.form?.requestSubmit()} />;
+}
+
 export function PrintButton({ label = "พิมพ์" }: { label?: string }) {
   return (
     <button type="button" onClick={() => window.print()} className="btn no-print">
