@@ -1,5 +1,6 @@
 "use server";
 
+import { RESULT_RANGE_SQL } from "@/lib/ranges";
 import { z } from "zod";
 import { db, audit } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -22,7 +23,7 @@ export async function aiSummary(_: AiState, formData: FormData): Promise<AiState
     db
       .prepare(
         `SELECT date(coalesce(s.collected_at, o.ordered_at)) AS date, t.code AS test, t.name, t.loinc, i.value, t.unit,
-                t.ref_low, t.ref_high, i.flag
+                ${RESULT_RANGE_SQL}, i.flag
          ${base} AND i.status = 'VERIFIED' ORDER BY date, i.id`,
       )
       .all(patientId) as (Omit<LabHistory["results"][number], "ref"> & { ref_low: number | null; ref_high: number | null })[]

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { flagResult, isValidCid, cidCheckDigit, groupIntoTubes, ungroundedNumbers, orderStatus, withPrevious } from "../src/lib/rules.ts";
+import { flagResult, isValidCid, cidCheckDigit, groupIntoTubes, ungroundedNumbers, orderStatus, withPrevious, pickRange, rangeProblem } from "../src/lib/rules.ts";
 
 const glucose = { ref_low: 70, ref_high: 100, crit_low: 40, crit_high: 500 };
 
@@ -65,6 +65,34 @@ test("withPrevious", () => {
   assert.equal(out[1].prev, null); // first time
   assert.equal(out[2].prev, null); // never done
   assert.deepEqual(out[3].prev, { value: "6.1", date: "2026-01-10" }); // October is later, not previous
+});
+
+test("pickRange", () => {
+  const base = { test_id: 2, age_min: null, age_max: null, crit_low: null, crit_high: 10, status: "APPROVED" };
+  const rows = [
+    { ...base, id: 1, sex: null, ref_low: 0.7, ref_high: 1.2, effective_from: "2026-01-01" },
+    { ...base, id: 2, sex: "F" as const, ref_low: 0.5, ref_high: 0.9, effective_from: "2026-01-01" },
+    { ...base, id: 3, sex: "F" as const, ref_low: 0.45, ref_high: 0.95, effective_from: "2026-11-01" }, // approved, not yet in effect
+    { ...base, id: 4, sex: "M" as const, ref_low: 0.6, ref_high: 1.1, effective_from: "2026-06-01", status: "PENDING" }, // not approved
+    { ...base, id: 5, sex: null, ref_low: 0.3, ref_high: 0.7, age_max: 12, effective_from: "2026-01-01" }, // children
+  ];
+  assert.equal(pickRange(rows, 2, "F", 40, "2026-10-08")?.id, 2); // sex-specific beats any-sex
+  assert.equal(pickRange(rows, 2, "M", 40, "2026-10-08")?.id, 1); // pending ignored -> falls back to any-sex
+  assert.equal(pickRange(rows, 2, "F", 40, "2026-11-02")?.id, 3); // newer version once in effect
+  assert.equal(pickRange(rows, 2, "M", 8, "2026-10-08")?.id, 5); // age-bounded beats unbounded
+  assert.equal(pickRange(rows, 2, "F", 8, "2026-10-08")?.id, 2); // sex outranks age bounds
+  assert.equal(pickRange(rows, 99, "F", 40, "2026-10-08"), null);
+});
+
+test("rangeProblem", () => {
+  const ok = { ref_low: 70, ref_high: 100, crit_low: 40, crit_high: 500, age_min: null, age_max: null };
+  assert.equal(rangeProblem(ok), null);
+  assert.match(rangeProblem({ ...ok, ref_low: 120 })!, /น้อยกว่าค่าสูงสุด/);
+  assert.match(rangeProblem({ ...ok, crit_low: 80 })!, /วิกฤตต่ำ/);
+  assert.match(rangeProblem({ ...ok, crit_high: 90 })!, /วิกฤตสูง/);
+  assert.match(rangeProblem({ ...ok, ref_low: null, ref_high: null })!, /อย่างน้อยหนึ่งค่า/);
+  assert.match(rangeProblem({ ...ok, age_min: 60, age_max: 18 })!, /อายุเริ่ม/);
+  assert.equal(rangeProblem({ ...ok, ref_low: null, crit_low: null }), null); // upper bound only (e.g. PSA < 4)
 });
 
 test("isValidCid", () => {

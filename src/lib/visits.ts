@@ -1,3 +1,4 @@
+import { RESULT_RANGE_SQL } from "./ranges";
 import { db } from "./db";
 import { orderStatus, withPrevious } from "./rules";
 
@@ -5,7 +6,7 @@ import { orderStatus, withPrevious } from "./rules";
 export function visitResults(visitId: number, patientId: number) {
   const rows = db
     .prepare(
-      `SELECT i.id AS item_id, i.test_id, o.visit_id, v.created_at AS visit_at, t.code, t.name, i.status, i.value, i.flag, t.unit, t.ref_low, t.ref_high,
+      `SELECT i.id AS item_id, i.test_id, o.visit_id, v.created_at AS visit_at, t.code, t.name, i.status, i.value, i.flag, t.unit, ${RESULT_RANGE_SQL},
               ol.code AS outlab, EXISTS (SELECT 1 FROM result_amendments a WHERE a.item_id = i.id) AS amended
        FROM lab_order_items i JOIN lab_orders o ON o.id = i.order_id JOIN visits v ON v.id = o.visit_id JOIN lab_tests t ON t.id = i.test_id
        LEFT JOIN outlabs ol ON ol.id = t.outlab_id

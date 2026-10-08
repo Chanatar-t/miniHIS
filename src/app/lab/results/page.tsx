@@ -6,6 +6,7 @@ import { Flash } from "@/components/flash";
 import { LabSteps, labCounts } from "../steps";
 import { ResultInput } from "./result-input";
 import { saveResults, importHl7 } from "./actions";
+import { approvedRanges, rangeFor, type Range } from "@/lib/ranges";
 
 type Row = {
   item_id: number; accession_no: string; collected_at: string; hn: string; patient: string; priority: string;
@@ -17,10 +18,10 @@ export default async function ResultsPage({ searchParams }: PageProps<"/lab/resu
   await requireRole("LAB");
   const sp = await searchParams;
   // ready for a result: in-house tube received, or outlab tube already sent
-  const rows = db
+  const raw = db
     .prepare(
       `SELECT i.id AS item_id, s.accession_no, s.collected_at, p.hn, p.prefix || p.first_name || ' ' || p.last_name AS patient, o.priority,
-              t.code, t.name, t.unit, t.ref_low, t.ref_high, t.crit_low, t.crit_high, ol.code AS outlab, t.outlab_code, t.tat_days,
+              i.test_id, p.sex, p.dob, t.code, t.name, t.unit, ol.code AS outlab, t.outlab_code, t.tat_days,
               datetime(s.collected_at, ${DUE_OFFSET}) AS due,
               datetime(s.collected_at, ${DUE_OFFSET}) < datetime('now','localtime') AS overdue
        FROM lab_order_items i
@@ -30,7 +31,10 @@ export default async function ResultsPage({ searchParams }: PageProps<"/lab/resu
        WHERE (t.outlab_id IS NULL AND i.status = 'RECEIVED') OR (t.outlab_id IS NOT NULL AND i.status = 'SENT')
        ORDER BY o.priority = 'STAT' DESC, overdue DESC, s.collected_at, i.id`,
     )
-    .all() as Row[];
+    .all() as (Omit<Row, keyof Range> & { test_id: number; sex: string; dob: string })[];
+  // the range each patient will be flagged with (sex/age specific, in force today) — same as the server uses on save
+  const ranges = approvedRanges();
+  const rows: Row[] = raw.map((r) => ({ ...r, ...rangeFor(ranges, r.test_id, r.sex, r.dob) }));
   const inhouse = rows.filter((r) => !r.outlab);
   const outlab = rows.filter((r) => r.outlab);
   const tab = sp.tab === "out" || sp.tab === "in" ? sp.tab : inhouse.length || !outlab.length ? "in" : "out";

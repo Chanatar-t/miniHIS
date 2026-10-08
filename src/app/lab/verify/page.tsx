@@ -1,3 +1,4 @@
+import { RESULT_RANGE_SQL } from "@/lib/ranges";
 import { LabSteps } from "../steps";
 import Link from "next/link";
 import { db } from "@/lib/db";
@@ -17,7 +18,7 @@ export default async function VerifyPage({ searchParams }: PageProps<"/lab/verif
   const rows = db
     .prepare(
       `SELECT i.id AS item_id, o.id AS order_id, o.priority, p.hn, p.prefix || p.first_name || ' ' || p.last_name AS patient,
-              d.name AS doctor, t.code, t.name, i.value, i.flag, t.unit, t.ref_low, t.ref_high,
+              d.name AS doctor, t.code, t.name, i.value, i.flag, t.unit, ${RESULT_RANGE_SQL},
               i.resulted_by, u.name AS resulted_by_name, m.control_id AS source, i.resulted_at
        FROM lab_order_items i
        JOIN lab_orders o ON o.id = i.order_id JOIN visits v ON v.id = o.visit_id JOIN patients p ON p.id = v.patient_id

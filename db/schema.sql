@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
   id       INTEGER PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   name     TEXT NOT NULL,
-  role     TEXT NOT NULL CHECK (role IN ('CLERK','DOCTOR','LAB','ADMIN'))
+  role     TEXT NOT NULL CHECK (role IN ('CLERK','DOCTOR','LAB','ADMIN')),
+  can_approve_config INTEGER NOT NULL DEFAULT 0  -- permission, not a role: e.g. the pathologist (also LAB)
 );
 
 -- running numbers (HN, VN, accession, shipment); incremented atomically
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS outlabs (
 );
 
 -- test catalog; outlab_id NULL = in-house
+-- ref_*/crit_* here are only the legacy default: reference ranges live in test_ranges (versioned, approved)
 CREATE TABLE IF NOT EXISTS lab_tests (
   id            INTEGER PRIMARY KEY,
   code          TEXT NOT NULL UNIQUE,
@@ -61,7 +63,8 @@ CREATE TABLE IF NOT EXISTS lab_tests (
   outlab_id     INTEGER REFERENCES outlabs(id),
   outlab_code   TEXT,                       -- test code at the outlab (mapping)
   outlab_cost   REAL,                       -- what the outlab bills us
-  tat_days      INTEGER NOT NULL DEFAULT 1
+  tat_days      INTEGER NOT NULL DEFAULT 1,
+  active        INTEGER NOT NULL DEFAULT 1  -- a new test stays 0 until its first range is approved
 );
 
 CREATE TABLE IF NOT EXISTS lab_orders (
@@ -113,6 +116,11 @@ CREATE TABLE IF NOT EXISTS lab_order_items (
   resulted_by INTEGER REFERENCES users(id),  -- verifier must differ (four-eyes); NULL = came from outlab HL7
   resulted_at TEXT,
   message_id  INTEGER REFERENCES inbound_messages(id), -- which HL7 message delivered it
+  -- range used when the result was flagged; reports keep showing it even after the range is revised
+  ref_low     REAL,
+  ref_high    REAL,
+  crit_low    REAL,
+  crit_high   REAL,
   verified_by INTEGER REFERENCES users(id),
   verified_at TEXT
 );
@@ -168,3 +176,27 @@ CREATE TABLE IF NOT EXISTS uat_results (
   note    TEXT,
   at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
+
+-- Reference / critical ranges, versioned. Proposed by lab staff, approved by someone else with can_approve_config.
+-- Resolution (src/lib/rules.ts pickRange): APPROVED rows matching the patient's sex/age, effective now,
+-- most specific scope first, then latest effective_from. Old versions are kept, never edited.
+CREATE TABLE IF NOT EXISTS test_ranges (
+  id             INTEGER PRIMARY KEY,
+  test_id        INTEGER NOT NULL REFERENCES lab_tests(id),
+  sex            TEXT CHECK (sex IN ('M','F')),     -- NULL = any
+  age_min        INTEGER,                           -- years, inclusive; NULL = no lower bound
+  age_max        INTEGER,                           -- years, inclusive; NULL = no upper bound
+  ref_low        REAL,
+  ref_high       REAL,
+  crit_low       REAL,
+  crit_high      REAL,
+  effective_from TEXT NOT NULL,                     -- YYYY-MM-DD
+  status         TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','APPROVED','REJECTED')),
+  reason         TEXT NOT NULL,                     -- why: guideline, new reagent lot, analyzer change ...
+  proposed_by    INTEGER REFERENCES users(id),
+  proposed_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  reviewed_by    INTEGER REFERENCES users(id),
+  reviewed_at    TEXT,
+  review_note    TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ranges_test ON test_ranges(test_id, status);

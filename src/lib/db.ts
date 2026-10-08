@@ -24,6 +24,12 @@ function open(): DatabaseSync {
 // ponytail: hand-written list; switch to numbered migration files once there are more than a few.
 const ADDED_COLUMNS: [table: string, column: string, type: string][] = [
   ["lab_order_items", "message_id", "INTEGER REFERENCES inbound_messages(id)"],
+  ["users", "can_approve_config", "INTEGER NOT NULL DEFAULT 0"],
+  ["lab_tests", "active", "INTEGER NOT NULL DEFAULT 1"],
+  ["lab_order_items", "ref_low", "REAL"],
+  ["lab_order_items", "ref_high", "REAL"],
+  ["lab_order_items", "crit_low", "REAL"],
+  ["lab_order_items", "crit_high", "REAL"],
 ];
 function upgrade(d: DatabaseSync) {
   for (const [table, column, type] of ADDED_COLUMNS) {
@@ -32,6 +38,30 @@ function upgrade(d: DatabaseSync) {
   }
   // second medtech for four-eyes demo (seeded from day 3)
   d.prepare("INSERT INTO users(username, name, role) SELECT 'lab2', 'ทนพ.สมศักดิ์ ตรวจดี', 'LAB' WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'lab2')").run();
+  // pathologist: works in the lab and may approve reference-range changes
+  d.prepare(
+    "INSERT INTO users(username, name, role, can_approve_config) SELECT 'path', 'พญ.วิไล พยาธิ (พยาธิแพทย์)', 'LAB', 1 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'path')",
+  ).run();
+
+  // first time: today's catalog ranges become version 1, plus the sex-specific ranges a real lab would use
+  if (!d.prepare("SELECT 1 FROM test_ranges").get()) {
+    const approver = (d.prepare("SELECT id FROM users WHERE username = 'path'").get() as { id: number }).id;
+    const ins = d.prepare(
+      `INSERT INTO test_ranges(test_id, sex, ref_low, ref_high, crit_low, crit_high, effective_from, status, reason, proposed_by, reviewed_by, reviewed_at)
+       VALUES (?, ?, ?, ?, ?, ?, '2026-01-01', 'APPROVED', ?, ?, ?, '2026-01-01 08:00:00')`,
+    );
+    const tests = d.prepare("SELECT id, code, ref_low, ref_high, crit_low, crit_high FROM lab_tests").all() as {
+      id: number; code: string; ref_low: number | null; ref_high: number | null; crit_low: number | null; crit_high: number | null;
+    }[];
+    const bySex: Record<string, [sex: "M" | "F", lo: number, hi: number][]> = {
+      CREA: [["M", 0.7, 1.2], ["F", 0.5, 0.9]],
+      FERR: [["M", 30, 400], ["F", 13, 150]],
+    };
+    for (const t of tests) {
+      ins.run(t.id, null, t.ref_low, t.ref_high, t.crit_low, t.crit_high, "ค่าเริ่มต้นจากระบบเดิม", approver, approver);
+      for (const [sex, lo, hi] of bySex[t.code] ?? []) ins.run(t.id, sex, lo, hi, t.crit_low, t.crit_high, "ค่าอ้างอิงแยกตามเพศ", approver, approver);
+    }
+  }
 }
 
 // survive Next.js dev hot reload

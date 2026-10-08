@@ -45,6 +45,42 @@ export function orderStatus(itemStatuses: string[]): OrderStatus {
   return "IN_PROGRESS";
 }
 
+export type RangeRow = {
+  id: number; test_id: number; sex: "M" | "F" | null; age_min: number | null; age_max: number | null;
+  ref_low: number | null; ref_high: number | null; crit_low: number | null; crit_high: number | null;
+  effective_from: string; status: string;
+};
+
+// Which approved range applies to this patient today.
+// Most specific scope wins (sex-specific > any sex; age-bounded > unbounded), then the newest version in effect.
+export function pickRange(rows: RangeRow[], testId: number, sex: string, age: number, today: string): RangeRow | null {
+  const score = (r: RangeRow) => (r.sex ? 2 : 0) + (r.age_min != null || r.age_max != null ? 1 : 0);
+  const fits = rows.filter(
+    (r) =>
+      r.test_id === testId &&
+      r.status === "APPROVED" &&
+      r.effective_from <= today &&
+      (r.sex == null || r.sex === sex) &&
+      (r.age_min == null || age >= r.age_min) &&
+      (r.age_max == null || age <= r.age_max),
+  );
+  fits.sort((a, b) => score(b) - score(a) || b.effective_from.localeCompare(a.effective_from) || b.id - a.id);
+  return fits[0] ?? null;
+}
+
+// Sanity rules for a proposed range; returns a message for the proposer, or null if fine.
+export function rangeProblem(r: {
+  ref_low: number | null; ref_high: number | null; crit_low: number | null; crit_high: number | null; age_min: number | null; age_max: number | null;
+}): string | null {
+  if (r.ref_low == null && r.ref_high == null) return "ต้องมีค่าต่ำสุดหรือสูงสุดของช่วงปกติอย่างน้อยหนึ่งค่า";
+  if (r.ref_low != null && r.ref_high != null && r.ref_low >= r.ref_high) return "ค่าต่ำสุดต้องน้อยกว่าค่าสูงสุด";
+  if (r.crit_low != null && r.ref_low != null && r.crit_low > r.ref_low) return "ค่าวิกฤตต่ำต้องไม่มากกว่าค่าปกติต่ำสุด";
+  if (r.crit_high != null && r.ref_high != null && r.crit_high < r.ref_high) return "ค่าวิกฤตสูงต้องไม่น้อยกว่าค่าปกติสูงสุด";
+  if (r.age_min != null && r.age_max != null && r.age_min > r.age_max) return "อายุเริ่มต้องไม่มากกว่าอายุสิ้นสุด";
+  if ([r.age_min, r.age_max].some((a) => a != null && (a < 0 || a > 130))) return "อายุต้องอยู่ระหว่าง 0-130 ปี";
+  return null;
+}
+
 // For each result, the most recent verified value of the same test from an EARLIER visit.
 // Compared by visit time, not id: back-entered / migrated visits get later ids than newer ones.
 // visit_at: "YYYY-MM-DD HH:MM:SS" (sorts as text). history order does not matter.

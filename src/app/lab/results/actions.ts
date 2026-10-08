@@ -7,9 +7,14 @@ import { flagResult } from "@/lib/rules";
 import { parseOru, type Oru } from "@/lib/hl7";
 import { fail, withFlash } from "@/lib/flash";
 import { isCritical } from "@/lib/labels";
+import { approvedRanges, rangeFor, RESULT_RANGE_SQL, type Range } from "@/lib/ranges";
 
 const now = "datetime('now','localtime')";
-type Range = { ref_low: number | null; ref_high: number | null; crit_low: number | null; crit_high: number | null };
+// Flag with the range in force for THIS patient (sex/age) and store that range with the result,
+// so a later range revision never changes what an existing report says.
+const SNAPSHOT = "ref_low = ?, ref_high = ?, crit_low = ?, crit_high = ?";
+const snap = (r: Range) => [r.ref_low, r.ref_high, r.crit_low, r.crit_high] as const;
+const PATIENT_JOIN = "JOIN lab_orders o ON o.id = i.order_id JOIN visits v ON v.id = o.visit_id JOIN patients p ON p.id = v.patient_id";
 
 // Manual entry: in-house tests after receive, or outlab tests whose result came on paper / portal.
 export async function saveResults(formData: FormData) {
@@ -21,18 +26,20 @@ export async function saveResults(formData: FormData) {
     if (entries.length === 0) fail("ยังไม่ได้กรอกผล");
     return tx(db, () => {
       const item = db.prepare(
-        `SELECT i.status, t.code, t.outlab_id, t.ref_low, t.ref_high, t.crit_low, t.crit_high
-         FROM lab_order_items i JOIN lab_tests t ON t.id = i.test_id WHERE i.id = ?`,
+        `SELECT i.status, i.test_id, t.code, t.outlab_id, p.sex, p.dob
+         FROM lab_order_items i JOIN lab_tests t ON t.id = i.test_id ${PATIENT_JOIN} WHERE i.id = ?`,
       );
       const save = db.prepare(
-        `UPDATE lab_order_items SET value = ?, flag = ?, resulted_by = ?, resulted_at = ${now}, status = 'RESULTED' WHERE id = ?`,
+        `UPDATE lab_order_items SET value = ?, flag = ?, ${SNAPSHOT}, resulted_by = ?, resulted_at = ${now}, status = 'RESULTED' WHERE id = ?`,
       );
+      const ranges = approvedRanges();
       for (const e of entries) {
-        const it = item.get(e.itemId) as (Range & { status: string; code: string; outlab_id: number | null }) | undefined;
+        const it = item.get(e.itemId) as { status: string; test_id: number; code: string; outlab_id: number | null; sex: string; dob: string } | undefined;
         if (!it) fail("ไม่พบรายการ");
         const ready = it.outlab_id == null ? it.status === "RECEIVED" : it.status === "SENT";
         if (!ready) fail(`${it.code}: สถานะ ${it.status} ลงผลไม่ได้ (อาจมีคนลงผลไปแล้ว)`);
-        save.run(e.value, flagResult(e.value, it), user.id, e.itemId);
+        const range = rangeFor(ranges, it.test_id, it.sex, it.dob);
+        save.run(e.value, flagResult(e.value, range), ...snap(range), user.id, e.itemId);
         audit(db, user.id, "RESULT", "lab_order_item", e.itemId, `${it.code}=${e.value}`);
       }
       return `✓ บันทึกผล ${entries.length} รายการแล้ว · ขั้นต่อไป: ให้เจ้าหน้าที่อีกคนกด Verify (เมนูขั้นที่ 5)`;
@@ -65,25 +72,29 @@ export async function importHl7(formData: FormData) {
 
       // match: our accession (OBR-2) + the outlab's own test code (OBX-3)
       const find = db.prepare(
-        `SELECT i.id, i.status, t.code, ol.code AS outlab, t.ref_low, t.ref_high, t.crit_low, t.crit_high
+        `SELECT i.id, i.status, i.test_id, t.code, ol.code AS outlab, p.sex, p.dob
          FROM specimens s JOIN lab_order_items i ON i.specimen_id = s.id
-         JOIN lab_tests t ON t.id = i.test_id JOIN outlabs ol ON ol.id = t.outlab_id
+         JOIN lab_tests t ON t.id = i.test_id JOIN outlabs ol ON ol.id = t.outlab_id ${PATIENT_JOIN}
          WHERE s.accession_no = ? AND t.outlab_code = ? AND s.reject_reason IS NULL`,
       );
       const save = db.prepare(
-        `UPDATE lab_order_items SET value = ?, flag = ?, resulted_by = NULL, resulted_at = ${now}, message_id = ?, status = 'RESULTED'
+        `UPDATE lab_order_items SET value = ?, flag = ?, ${SNAPSHOT}, resulted_by = NULL, resulted_at = ${now}, message_id = ?, status = 'RESULTED'
          WHERE id = ?`,
       );
+      const ranges = approvedRanges();
       let applied = 0;
       const problems: string[] = [];
       for (const r of msg.results) {
-        const it = find.get(r.accession, r.code) as (Range & { id: number; status: string; code: string; outlab: string }) | undefined;
+        const it = find.get(r.accession, r.code) as
+          | { id: number; status: string; test_id: number; code: string; outlab: string; sex: string; dob: string }
+          | undefined;
         const where = `${r.accession} ${r.code}`;
         if (!it) problems.push(`${where}: ไม่พบในระบบ`);
         else if (it.outlab !== msg.sendingApp) problems.push(`${where}: ไม่ใช่ test ของ ${msg.sendingApp}`);
         else if (it.status !== "SENT") problems.push(`${where}: สถานะ ${it.status}`);
         else {
-          save.run(r.value, flagResult(r.value, it), msgId, it.id);
+          const range = rangeFor(ranges, it.test_id, it.sex, it.dob);
+          save.run(r.value, flagResult(r.value, range), ...snap(range), msgId, it.id);
           applied++;
         }
       }
@@ -142,7 +153,7 @@ export async function amendResult(formData: FormData) {
     return tx(db, () => {
       const it = db
         .prepare(
-          `SELECT i.status, i.value, t.code, t.ref_low, t.ref_high, t.crit_low, t.crit_high
+          `SELECT i.status, i.value, t.code, ${RESULT_RANGE_SQL}
            FROM lab_order_items i JOIN lab_tests t ON t.id = i.test_id WHERE i.id = ? AND i.order_id = ?`,
         )
         .get(itemId, orderId) as (Range & { status: string; value: string; code: string }) | undefined;

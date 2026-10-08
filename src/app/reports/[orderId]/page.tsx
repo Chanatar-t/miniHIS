@@ -1,3 +1,4 @@
+import { RESULT_RANGE_SQL } from "@/lib/ranges";
 import { BackLink } from "@/components/patient";
 import { notFound } from "next/navigation";
 import { db, audit } from "@/lib/db";
@@ -36,7 +37,7 @@ export default async function ReportPage({ params, searchParams }: PageProps<"/r
 
   const items = db
     .prepare(
-      `SELECT i.id, t.code, t.name, t.loinc, i.status, i.value, i.flag, t.unit, t.ref_low, t.ref_high, ol.name AS outlab,
+      `SELECT i.id, t.code, t.name, t.loinc, i.status, i.value, i.flag, t.unit, ${RESULT_RANGE_SQL}, ol.name AS outlab,
               s.accession_no, s.collected_at, i.verified_at, u.name AS verifier
        FROM lab_order_items i JOIN lab_tests t ON t.id = i.test_id LEFT JOIN outlabs ol ON ol.id = t.outlab_id
        LEFT JOIN specimens s ON s.id = i.specimen_id LEFT JOIN users u ON u.id = i.verified_by
