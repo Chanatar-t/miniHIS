@@ -19,11 +19,9 @@ export const metadata: Metadata = {
 
 const NAV: { href: string; label: string; roles: Role[] }[] = [
   { href: "/patients", label: "ผู้ป่วย / Visit วันนี้", roles: ["CLERK", "DOCTOR", "LAB", "ADMIN"] },
-  { href: "/lab/collect", label: "เก็บสิ่งส่งตรวจ", roles: ["LAB"] },
-  { href: "/lab/receive", label: "รับเข้า Lab", roles: ["LAB"] },
-  { href: "/lab/shipments", label: "ส่ง Outlab", roles: ["LAB"] },
-  { href: "/lab/results", label: "ลงผล", roles: ["LAB"] },
-  { href: "/lab/verify", label: "Verify", roles: ["LAB"] },
+  // one entry: the lab pages carry their own step bar (collect > receive > ship > results > verify)
+  { href: "/lab", label: "🧪 งาน Lab", roles: ["LAB"] },
+  { href: "/config", label: "⚙ ค่าอ้างอิง", roles: ["LAB"] },
   { href: "/admin/audit", label: "Audit log", roles: ["ADMIN"] },
   { href: "/guide", label: "📘 คู่มือ / UAT", roles: ["CLERK", "DOCTOR", "LAB", "ADMIN"] },
 ];
@@ -42,7 +40,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {user && (
           <header className="no-print border-b border-slate-200 bg-white" style={{ viewTransitionName: "site-header" }}>
             <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-2">
-              <Link href="/" className="font-semibold text-teal-700">
+              <Link href="/" className="shrink-0 whitespace-nowrap font-semibold text-teal-700">
                 Mini HIS
               </Link>
               <nav className="flex flex-wrap gap-1 text-sm">
@@ -52,11 +50,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                   </NavLink>
                 ))}
               </nav>
-              <form action={signOut} className="ml-auto flex items-center gap-3 text-sm">
-                <span>
+              <form action={signOut} className="ml-auto flex min-w-0 items-center gap-3 text-sm">
+                <span className="min-w-0 truncate" title={user.name}>
                   {user.name} <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{user.role}</span>
                 </span>
-                <button className="btn-ghost">ออกจากระบบ</button>
+                <button className="btn-ghost shrink-0 whitespace-nowrap">ออกจากระบบ</button>
               </form>
             </div>
           </header>

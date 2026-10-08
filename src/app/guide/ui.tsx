@@ -26,6 +26,7 @@ export const TONE: Record<RoleGuide["tone"], { solid: string; soft: string; text
   sky: { solid: "bg-sky-600", soft: "bg-sky-50 border-sky-200", text: "text-sky-700", ring: "ring-sky-200", bar: "bg-sky-500" },
   teal: { solid: "bg-teal-600", soft: "bg-teal-50 border-teal-200", text: "text-teal-700", ring: "ring-teal-200", bar: "bg-teal-500" },
   violet: { solid: "bg-violet-600", soft: "bg-violet-50 border-violet-200", text: "text-violet-700", ring: "ring-violet-200", bar: "bg-violet-500" },
+  amber: { solid: "bg-amber-600", soft: "bg-amber-50 border-amber-200", text: "text-amber-800", ring: "ring-amber-200", bar: "bg-amber-500" },
   slate: { solid: "bg-slate-700", soft: "bg-slate-50 border-slate-200", text: "text-slate-700", ring: "ring-slate-200", bar: "bg-slate-500" },
 };
 

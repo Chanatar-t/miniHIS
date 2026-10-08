@@ -4,7 +4,8 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { db, audit } from "./db";
 
 export type Role = "CLERK" | "DOCTOR" | "LAB" | "ADMIN";
-export type User = { id: number; username: string; name: string; role: Role };
+// canApprove: permission on top of the role (e.g. a pathologist who is LAB and may approve reference ranges)
+export type User = { id: number; username: string; name: string; role: Role; canApprove: number };
 
 // ponytail: demo login = pick a user, no password. Cookie is HMAC-signed so the role can't be forged.
 // Real deployment: hospital SSO / LDAP + password policy.
@@ -33,7 +34,7 @@ export async function currentUser(): Promise<User | null> {
   const [id, mac] = raw.split(".");
   const expected = sign(id);
   if (!mac || mac.length !== expected.length || !timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return null;
-  return (db.prepare("SELECT id, username, name, role FROM users WHERE id = ?").get(Number(id)) as User) ?? null;
+  return (db.prepare("SELECT id, username, name, role, can_approve_config AS canApprove FROM users WHERE id = ?").get(Number(id)) as User) ?? null;
 }
 
 // Use in every page AND every server action: hiding a button is not access control.

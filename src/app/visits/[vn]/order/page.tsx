@@ -28,6 +28,7 @@ export default async function OrderPage({ params }: PageProps<"/visits/[vn]/orde
               (SELECT COUNT(*) FROM lab_order_items i JOIN lab_orders o ON o.id = i.order_id
                WHERE i.test_id = t.id AND o.ordered_by = ?) AS used
        FROM lab_tests t LEFT JOIN outlabs ol ON ol.id = t.outlab_id
+       WHERE t.active = 1 -- new tests appear only after their first range is approved
        ORDER BY used DESC, t.code`,
     )
     .all(user.id) as CatalogTest[];

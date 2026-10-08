@@ -318,6 +318,62 @@ async function main() {
   const flow = await get("/guide/flow");
   ok(flow.status === 200 && (await flow.text()).includes("สถานะของทั้งใบสั่ง"), "status/flow explainer is public");
 
+  console.log("# reference ranges (versioned, maker-checker)");
+  const path = ck(6); // pathologist: LAB + can approve
+  ok((await get("/config", doc)).headers.get("location")?.endsWith("/forbidden"), "doctor cannot open range configuration");
+  const cfg = await html("/config", lab);
+  ok(cfg.includes("CREA") && cfg.includes("หญิง · ทุกอายุ") && cfg.includes("0.5 - 0.9"), "config lists sex-specific CREA ranges");
+  // female patient: CREA flagged with the female range and the range is stored with the result
+  await submit("/patients/HN0000002", clerk, isVisitForm, { scheme: "UC" });
+  const vnF = one("SELECT v.vn FROM visits v JOIN patients p ON p.id = v.patient_id WHERE p.hn = 'HN0000002'").vn;
+  await submit(`/visits/${vnF}/order`, doc, 1, { testId: [2], priority: "ROUTINE", note: "" });
+  const ordF = one("SELECT max(id) id FROM lab_orders").id;
+  await submit("/lab/collect", lab, (f) => f.includes(`name="orderId" value="${ordF}"`));
+  await scan(one("SELECT accession_no a FROM specimens WHERE order_id = ?", ordF).a);
+  const itemF = one("SELECT id FROM lab_order_items WHERE order_id = ?", ordF).id;
+  ok((await html("/lab/results", lab)).includes("ปกติ 0.5 - 0.9"), "result entry shows the patient's own (female) range");
+  r = await submit("/lab/results", lab, (f) => f.includes(`name="value_${itemF}"`), { [`value_${itemF}`]: "1.0" });
+  let snapF = one("SELECT flag, ref_low, ref_high FROM lab_order_items WHERE id = ?", itemF);
+  ok(snapF.flag === "H" && snapF.ref_high === 0.9, "CREA 1.0 in a woman -> H (0.5-0.9); range stored with the result");
+  await post("/lab/verify", lab2, forms(await html("/lab/verify", lab2)).find((f) => f.includes(`name="itemId" value="${itemF}"`)));
+  ok(one("SELECT status FROM lab_order_items WHERE id = ?", itemF).status === "VERIFIED", "female CREA verified (impact analysis uses verified results)");
+  // propose a revised female range
+  const proposeForm = (h) => forms(h).find((f) => f.includes('name="reason"'));
+  r = await post("/config/CREA", lab, proposeForm(await html("/config/CREA", lab)), { sex: "F", age_min: "", age_max: "", ref_low: "0.9", ref_high: "0.5", crit_low: "", crit_high: "10", effective_from: new Date().toLocaleDateString("sv-SE"), reason: "ทดสอบค่าผิด" });
+  ok(r.status === 200 && one("SELECT COUNT(*) n FROM test_ranges WHERE status = 'PENDING'").n === 0, "invalid proposal (low > high) rejected, nothing stored");
+  r = await post("/config/CREA", lab, proposeForm(await html("/config/CREA", lab)), { sex: "F", age_min: "", age_max: "", ref_low: "0.45", ref_high: "1.05", crit_low: "", crit_high: "10", effective_from: new Date().toLocaleDateString("sv-SE"), reason: "ปรับตามคู่มือน้ำยาล็อตใหม่ 2026" });
+  const prop = one("SELECT id, status FROM test_ranges WHERE status = 'PENDING'");
+  ok(r.loc.includes("/config/CREA?msg=") && prop, "lab proposes a new female range -> pending");
+  const crPage = await html("/config/CREA", path);
+  ok(crPage.includes("ธงเปลี่ยน 1 ผล") && crPage.includes("H → ปกติ: 1"), "approver sees impact: last result would go H -> normal");
+  const reviewOf = (h) => forms(h).find((f) => f.includes(`name="rangeId" value="${prop.id}"`));
+  ok(!reviewOf(await html("/config/CREA", lab)), "proposer gets no approve button");
+  const rv = reviewOf(crPage);
+  r = await post("/config/CREA", lab, rv, { decision: "APPROVED" });
+  ok(r.loc.includes("err=") && one("SELECT status FROM test_ranges WHERE id = ?", prop.id).status === "PENDING", "lab without permission cannot approve");
+  r = await post("/config/CREA", lab2, rv, { decision: "REJECTED", note: "" });
+  ok(r.loc.includes("err="), "reject needs a reason (and lab2 has no permission anyway)");
+  r = await post("/config/CREA", path, rv, { decision: "APPROVED" });
+  ok(one("SELECT status FROM test_ranges WHERE id = ?", prop.id).status === "APPROVED", "pathologist approves");
+  ok((await html("/config/CREA", path)).includes("ถูกแทนที่"), "old female range kept in history as superseded");
+  snapF = one("SELECT flag, ref_low, ref_high FROM lab_order_items WHERE id = ?", itemF);
+  ok(snapF.flag === "H" && snapF.ref_high === 0.9, "existing result unchanged after the revision (still H, 0.5-0.9)");
+  ok(one("SELECT COUNT(*) n FROM audit_log WHERE action IN ('PROPOSE_RANGE','APPROVE_RANGE')").n === 2, "proposal and approval audited");
+  // new test: not orderable until its first range is approved
+  r = await post("/config/new", lab, forms(await html("/config/new", lab)).find((f) => f.includes('name="code"')), {
+    code: "k", name: "Potassium", loinc: "2823-3", specimen_type: "Serum", container: "Red top", unit: "mmol/L", price: "60",
+    outlab_id: "", outlab_code: "", outlab_cost: "", tat_days: "0", ref_low: "3.5", ref_high: "5.1", crit_low: "2.5", crit_high: "6.5",
+    effective_from: new Date().toLocaleDateString("sv-SE"), reason: "เปิดบริการตรวจใหม่",
+  });
+  const kTest = one("SELECT id, active FROM lab_tests WHERE code = 'K'");
+  ok(r.loc.startsWith("/config/K") && kTest?.active === 0, "new test K created, inactive");
+  ok(!(await html(`/visits/${vnF}/order`, doc)).includes("Potassium"), "inactive test hidden from ordering");
+  await post(`/visits/${vnF}/order`, doc, forms(await html(`/visits/${vnF}/order`, doc))[1], { testId: [kTest.id], priority: "ROUTINE", note: "" });
+  ok(one("SELECT COUNT(*) n FROM lab_order_items WHERE test_id = ?", kTest.id).n === 0, "ordering an inactive test directly is refused");
+  const kr = one("SELECT id FROM test_ranges WHERE test_id = ?", kTest.id).id;
+  await post("/config/K", path, forms(await html("/config/K", path)).find((f) => f.includes(`name="rangeId" value="${kr}"`)), { decision: "APPROVED" });
+  ok(one("SELECT active FROM lab_tests WHERE id = ?", kTest.id).active === 1 && (await html(`/visits/${vnF}/order`, doc)).includes("Potassium"), "approving its first range makes K orderable");
+
   console.log("# not found");
   g = await get("/patients/HN9999999", doc);
   ok(g.status === 404 && (await g.text()).includes("ไม่พบข้อมูล"), "unknown HN -> Thai 404");

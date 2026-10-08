@@ -30,7 +30,11 @@ export async function createOrder(formData: FormData) {
       .prepare("INSERT INTO lab_orders(visit_id, ordered_by, priority, note) VALUES (?, ?, ?, ?)")
       .run(o.visitId, user.id, o.priority, o.note || null);
     const ins = db.prepare("INSERT INTO lab_order_items(order_id, test_id) VALUES (?, ?)");
-    for (const t of o.testIds) ins.run(orderId, t); // FK rejects unknown test ids -> whole tx rolls back
+    const active = db.prepare("SELECT 1 FROM lab_tests WHERE id = ? AND active = 1");
+    for (const t of o.testIds) {
+      if (!active.get(t)) throw new Error(`Test ${t} is not orderable`); // unknown or not yet approved -> whole tx rolls back
+      ins.run(orderId, t);
+    }
     audit(db, user.id, "CREATE", "lab_order", orderId, `tests=${o.testIds.join(",")}`);
     return v.hn;
   });
