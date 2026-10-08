@@ -3,7 +3,7 @@
 
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id       INTEGER PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   name     TEXT NOT NULL,
@@ -11,12 +11,12 @@ CREATE TABLE users (
 );
 
 -- running numbers (HN, VN, accession, shipment); incremented atomically
-CREATE TABLE counters (
+CREATE TABLE IF NOT EXISTS counters (
   name  TEXT PRIMARY KEY,
   value INTEGER NOT NULL
 );
 
-CREATE TABLE patients (
+CREATE TABLE IF NOT EXISTS patients (
   id         INTEGER PRIMARY KEY,
   hn         TEXT NOT NULL UNIQUE,
   cid        TEXT NOT NULL UNIQUE,          -- Thai national ID, checksum validated in app
@@ -28,9 +28,9 @@ CREATE TABLE patients (
   phone      TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
-CREATE INDEX idx_patients_name ON patients(first_name, last_name);
+CREATE INDEX IF NOT EXISTS idx_patients_name ON patients(first_name, last_name);
 
-CREATE TABLE visits (
+CREATE TABLE IF NOT EXISTS visits (
   id         INTEGER PRIMARY KEY,
   vn         TEXT NOT NULL UNIQUE,
   patient_id INTEGER NOT NULL REFERENCES patients(id),
@@ -38,14 +38,14 @@ CREATE TABLE visits (
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
-CREATE TABLE outlabs (
+CREATE TABLE IF NOT EXISTS outlabs (
   id   INTEGER PRIMARY KEY,
   code TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL
 );
 
 -- test catalog; outlab_id NULL = in-house
-CREATE TABLE lab_tests (
+CREATE TABLE IF NOT EXISTS lab_tests (
   id            INTEGER PRIMARY KEY,
   code          TEXT NOT NULL UNIQUE,
   name          TEXT NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE lab_tests (
   tat_days      INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE TABLE lab_orders (
+CREATE TABLE IF NOT EXISTS lab_orders (
   id         INTEGER PRIMARY KEY,
   visit_id   INTEGER NOT NULL REFERENCES visits(id),
   ordered_by INTEGER NOT NULL REFERENCES users(id),
@@ -74,7 +74,7 @@ CREATE TABLE lab_orders (
 );
 
 -- one tube; one accession barcode; goes to at most one shipment
-CREATE TABLE specimens (
+CREATE TABLE IF NOT EXISTS specimens (
   id            INTEGER PRIMARY KEY,
   accession_no  TEXT NOT NULL UNIQUE,
   order_id      INTEGER NOT NULL REFERENCES lab_orders(id),
@@ -89,7 +89,7 @@ CREATE TABLE specimens (
 );
 
 -- manifest of specimens sent to one outlab
-CREATE TABLE shipments (
+CREATE TABLE IF NOT EXISTS shipments (
   id          INTEGER PRIMARY KEY,
   shipment_no TEXT NOT NULL UNIQUE,
   outlab_id   INTEGER NOT NULL REFERENCES outlabs(id),
@@ -101,7 +101,7 @@ CREATE TABLE shipments (
 );
 
 -- one row per test; status drives every worklist
-CREATE TABLE lab_order_items (
+CREATE TABLE IF NOT EXISTS lab_order_items (
   id          INTEGER PRIMARY KEY,
   order_id    INTEGER NOT NULL REFERENCES lab_orders(id),
   test_id     INTEGER NOT NULL REFERENCES lab_tests(id),
@@ -116,10 +116,10 @@ CREATE TABLE lab_order_items (
   verified_by INTEGER REFERENCES users(id),
   verified_at TEXT
 );
-CREATE INDEX idx_items_status ON lab_order_items(status);
+CREATE INDEX IF NOT EXISTS idx_items_status ON lab_order_items(status);
 
 -- result changed after verify: keep the old value
-CREATE TABLE result_amendments (
+CREATE TABLE IF NOT EXISTS result_amendments (
   id        INTEGER PRIMARY KEY,
   item_id   INTEGER NOT NULL REFERENCES lab_order_items(id),
   old_value TEXT,
@@ -130,7 +130,7 @@ CREATE TABLE result_amendments (
 );
 
 -- critical value (LL/HH) must be reported to someone, logged
-CREATE TABLE critical_notifications (
+CREATE TABLE IF NOT EXISTS critical_notifications (
   id          INTEGER PRIMARY KEY,
   item_id     INTEGER NOT NULL REFERENCES lab_order_items(id),
   notified_to TEXT NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE critical_notifications (
 );
 
 -- raw HL7 from outlabs; control_id UNIQUE makes re-import idempotent
-CREATE TABLE inbound_messages (
+CREATE TABLE IF NOT EXISTS inbound_messages (
   id         INTEGER PRIMARY KEY,
   control_id TEXT NOT NULL UNIQUE,
   raw        TEXT NOT NULL,
@@ -149,7 +149,7 @@ CREATE TABLE inbound_messages (
   at         TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
   id        INTEGER PRIMARY KEY,
   user_id   INTEGER REFERENCES users(id),
   action    TEXT NOT NULL,
@@ -157,4 +157,14 @@ CREATE TABLE audit_log (
   entity_id INTEGER,
   detail    TEXT,
   at        TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+-- UAT: testers record pass/fail per test case from /guide (latest row per case+tester wins)
+CREATE TABLE IF NOT EXISTS uat_results (
+  id      INTEGER PRIMARY KEY,
+  case_id TEXT NOT NULL,                -- e.g. UAT-LAB-03, defined in src/lib/guide.ts
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  status  TEXT NOT NULL CHECK (status IN ('PASS','FAIL','BLOCKED')),
+  note    TEXT,
+  at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );

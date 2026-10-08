@@ -236,6 +236,29 @@ async function main() {
   ok(audit.includes("AI_SUMMARY") && audit.includes("VIEW") && !audit.includes("HN0000002"), "admin filters audit by patient HN");
   ok((await get("/admin/audit", doc)).headers.get("location")?.endsWith("/forbidden"), "doctor cannot open audit log");
 
+  console.log("# guide & UAT");
+  let gp = await get("/guide");
+  ok(gp.status === 200 && (await gp.text()).includes("คู่มือการใช้งานและทดสอบระบบ"), "guide is public (no login)");
+  ok((await html("/guide/lab")).includes("เพื่อบันทึกผลการทดสอบ"), "anonymous reader sees guide but not the UAT form");
+  ok((await get("/guide/nope")).status === 404, "unknown guide -> 404");
+  const tryForm = forms(await html("/guide/lab")).find((f) => f.includes('name="userId" value="3"'));
+  const tr = await fetch(`${B}/guide/lab`, { method: "POST", body: (() => { const b = new FormData(); for (const [n, v] of hidden(tryForm)) b.append(n, v); return b; })(), headers: { origin: B }, redirect: "manual" });
+  ok(tr.headers.get("location")?.endsWith("/lab/collect") && (tr.headers.get("set-cookie") ?? "").includes("session=3."), "'try as' logs in as lab and opens the first task page");
+  const evil = new FormData();
+  for (const [n, v] of hidden(tryForm, true)) evil.append(n, v);
+  evil.append("userId", "4");
+  evil.append("href", "//evil.example");
+  const ev = await fetch(`${B}/guide/lab`, { method: "POST", body: evil, headers: { origin: B }, redirect: "manual" });
+  ok(!(ev.headers.get("location") ?? "").includes("evil"), "'try as' refuses open redirect");
+  const uatForm = forms(await html("/guide/lab", lab2)).find((f) => f.includes('value="UAT-LAB-02"'));
+  r = await post("/guide/lab", lab2, uatForm, { status: "FAIL", note: "ไม่ขึ้นแถบแดง" });
+  ok(r.loc.includes("/guide/lab?saved=UAT-LAB-02"), "record UAT result");
+  r = await post("/guide/lab", lab2, uatForm, { status: "PASS", note: "" });
+  const uat = await html("/guide/uat", lab2);
+  ok(one("SELECT COUNT(*) n FROM uat_results WHERE case_id = 'UAT-LAB-02'").n === 2 && !uat.includes("ต้องแก้ไข ("), "re-test PASS supersedes FAIL; history kept");
+  r = await post("/guide/lab", lab2, uatForm, { caseId: "UAT-FAKE-99", status: "PASS" }, true);
+  ok(one("SELECT COUNT(*) n FROM uat_results").n === 2, "unknown case id rejected");
+
   console.log("# not found");
   g = await get("/patients/HN9999999", doc);
   ok(g.status === 404 && (await g.text()).includes("ไม่พบข้อมูล"), "unknown HN -> Thai 404");

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db, audit } from "@/lib/db";
 import { login } from "@/lib/auth";
@@ -30,6 +31,9 @@ export default function LoginPage() {
           </form>
         ))}
       </div>
+      <Link href="/guide" className="mt-4 block text-center text-sm text-teal-700 hover:underline">
+        📘 ยังไม่เคยใช้? อ่านคู่มือการใช้งานตามบทบาท
+      </Link>
     </div>
   );
 }

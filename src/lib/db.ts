@@ -10,11 +10,12 @@ function open(): DatabaseSync {
   mkdirSync(path.dirname(DB_FILE), { recursive: true });
   const db = new DatabaseSync(DB_FILE);
   db.exec("PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;");
-  // BEGIN IMMEDIATE: if several processes start at once (next build workers), only one creates the schema
+  // Schema is all IF NOT EXISTS: re-run on every start so new tables appear in an existing DB.
+  // ponytail: no column migrations; changing a column still needs `npm run db:reset`.
+  // BEGIN IMMEDIATE: if several processes start at once (next build workers), only one seeds.
   tx(db, () => {
-    if (db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'users'").get()) return;
     db.exec(readFileSync(path.join(process.cwd(), "db", "schema.sql"), "utf8"));
-    seed(db);
+    if (!db.prepare("SELECT 1 FROM users").get()) seed(db);
   });
   return db;
 }
