@@ -1,3 +1,4 @@
+import { Check, CircleSlash, Lightbulb, TriangleAlert, Wrench, X } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { currentUser } from "@/lib/auth";
@@ -27,8 +28,8 @@ export default async function RoleGuidePage({ params, searchParams }: PageProps<
       {/* banner */}
       <header className={`rounded-2xl border p-6 ${t.soft}`}>
         <div className="flex flex-wrap items-start gap-4">
-          <span className={`flex h-14 w-14 items-center justify-center rounded-2xl text-3xl text-white ${t.solid}`} aria-hidden>
-            {g.icon}
+          <span className={`flex h-14 w-14 items-center justify-center rounded-2xl text-white ${t.solid}`} aria-hidden>
+            <g.icon className="h-7 w-7" />
           </span>
           <div className="min-w-60 flex-1">
             <h1 className="text-2xl font-semibold">คู่มือ{g.name}</h1>
@@ -118,13 +119,13 @@ export default async function RoleGuidePage({ params, searchParams }: PageProps<
                 </div>
                 {task.tip && (
                   <div className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">
-                    <span aria-hidden>💡 </span>
+                    <Lightbulb className="mr-1 inline h-4 w-4" aria-hidden />
                     <Rich text={task.tip} />
                   </div>
                 )}
                 {task.warn && (
                   <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                    <span aria-hidden>⚠️ </span>
+                    <TriangleAlert className="mr-1 inline h-4 w-4" aria-hidden />
                     <Rich text={task.warn} />
                   </div>
                 )}
@@ -167,7 +168,7 @@ export default async function RoleGuidePage({ params, searchParams }: PageProps<
                       )}
                       {c.setup && (
                         <details className="mb-3 rounded-lg border border-sky-200 bg-sky-50">
-                          <summary className="cursor-pointer px-3 py-1.5 font-medium text-sky-800">🧰 วิธีเตรียมข้อมูล (ต้องสลับบัญชี)</summary>
+                          <summary className="cursor-pointer px-3 py-1.5 font-medium text-sky-800"><Wrench className="mr-1 inline h-4 w-4" aria-hidden />วิธีเตรียมข้อมูล (ต้องสลับบัญชี)</summary>
                           <ol className="list-decimal space-y-1 px-3 pb-2 pl-8 text-slate-700">
                             {c.setup.map((s, n) => (
                               <li key={n}>
@@ -199,20 +200,21 @@ export default async function RoleGuidePage({ params, searchParams }: PageProps<
                       {last.note && <> · “{last.note}”</>} · ทดสอบแล้ว {last.runs} ครั้ง
                     </p>
                   )}
-                  {saved === c.id && <p className="text-sm font-medium text-emerald-700">✓ บันทึกผลแล้ว</p>}
+                  {saved === c.id && <p className="text-sm font-medium text-emerald-700"><Check className="mr-1 inline h-4 w-4" aria-hidden />บันทึกผลแล้ว</p>}
                   {user ? (
                     <form action={recordUat} className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                       <input type="hidden" name="caseId" value={c.id} />
                       <fieldset className="flex gap-1" aria-label={`ผลการทดสอบ ${c.id}`}>
                         {(
                           [
-                            ["PASS", "✓ ผ่าน", "has-checked:bg-emerald-600 has-checked:text-white has-checked:border-emerald-600"],
-                            ["FAIL", "✗ ไม่ผ่าน", "has-checked:bg-red-600 has-checked:text-white has-checked:border-red-600"],
-                            ["BLOCKED", "⏸ ทดสอบไม่ได้", "has-checked:bg-amber-500 has-checked:text-white has-checked:border-amber-500"],
+                            ["PASS", "ผ่าน", "has-checked:bg-emerald-600 has-checked:text-white has-checked:border-emerald-600"],
+                            ["FAIL", "ไม่ผ่าน", "has-checked:bg-red-600 has-checked:text-white has-checked:border-red-600"],
+                            ["BLOCKED", "ทดสอบไม่ได้", "has-checked:bg-amber-500 has-checked:text-white has-checked:border-amber-500"],
                           ] as const
                         ).map(([v, label, cls]) => (
                           <label key={v} className={`cursor-pointer rounded-md border border-slate-300 px-3 py-1.5 text-sm has-focus-visible:ring-2 has-focus-visible:ring-teal-500 ${cls}`}>
                             <input type="radio" name="status" value={v} required className="sr-only" />
+                            {v === "PASS" ? <Check className="mr-1 inline h-4 w-4" aria-hidden /> : v === "FAIL" ? <X className="mr-1 inline h-4 w-4" aria-hidden /> : <CircleSlash className="mr-1 inline h-4 w-4" aria-hidden />}
                             {label}
                           </label>
                         ))}

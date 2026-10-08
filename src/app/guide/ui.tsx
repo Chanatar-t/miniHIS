@@ -1,3 +1,4 @@
+import { Check, CircleSlash, X } from "lucide-react";
 import type { RoleGuide } from "@/lib/guide";
 
 // **bold** = on-screen label, `code` = something to type
@@ -47,9 +48,9 @@ export function Progress({ pass, fail, blocked, total }: { pass: number; fail: n
         <div className="bg-amber-400" style={{ width: pct(blocked) }} />
       </div>
       <div className="mt-1 flex gap-3 text-xs text-slate-500">
-        <span>✓ ผ่าน {pass}</span>
-        {fail > 0 && <span className="text-red-600">✗ ไม่ผ่าน {fail}</span>}
-        {blocked > 0 && <span className="text-amber-700">⏸ ทดสอบไม่ได้ {blocked}</span>}
+        <span className="inline-flex items-center gap-0.5"><Check className="h-3 w-3" aria-hidden /> ผ่าน {pass}</span>
+        {fail > 0 && <span className="inline-flex items-center gap-0.5 text-red-600"><X className="h-3 w-3" aria-hidden /> ไม่ผ่าน {fail}</span>}
+        {blocked > 0 && <span className="inline-flex items-center gap-0.5 text-amber-700"><CircleSlash className="h-3 w-3" aria-hidden /> ทดสอบไม่ได้ {blocked}</span>}
         <span className="ml-auto">
           {pass + fail + blocked}/{total} ทดสอบแล้ว
         </span>

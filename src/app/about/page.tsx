@@ -1,3 +1,4 @@
+import { Database, KeyRound, Monitor, Server, Sparkles, Truck, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
@@ -128,19 +129,20 @@ export default function AboutPage() {
         <h2 className="text-xl font-semibold">สถาปัตยกรรม</h2>
         <div className="card overflow-x-auto">
           <div className="grid min-w-[760px] grid-cols-[1fr_auto_1.4fr_auto_1fr] items-center gap-3 text-sm">
-            <Box title="🖥 เบราว์เซอร์" tone="sky" items={["HTML ที่ render จาก server", "React (client) เฉพาะส่วนโต้ตอบ", "เครื่องสแกน barcode = คีย์บอร์ด", "พิมพ์ฉลาก/ใบนำส่ง/ใบรายงาน"]} />
+            <Box icon={Monitor} title="เบราว์เซอร์" tone="sky" items={["HTML ที่ render จาก server", "React (client) เฉพาะส่วนโต้ตอบ", "เครื่องสแกน barcode = คีย์บอร์ด", "พิมพ์ฉลาก/ใบนำส่ง/ใบรายงาน"]} />
             <Arrow top="GET หน้า / POST Server Action" bottom="HTML / RSC payload" />
             <Box
-              title={`⚙ Next.js ${d.next} บน Node ${process.version}`}
+              icon={Server}
+              title={`Next.js ${d.next} บน Node ${process.version}`}
               tone="teal"
               items={["Server Components: query + render", "Server Actions: requireRole → Zod → transaction", "Audit log ทุกการกระทำ", "กฎทางการแพทย์ใน lib/rules.ts (unit test)"]}
             />
             <Arrow top="SQL (prepared) ใน transaction" bottom="rows" />
-            <Box title={`🗄 SQLite ${sqlite}`} tone="violet" items={["ไฟล์ data/his.db", `${journal.toUpperCase()} journal`, "Foreign keys, UNIQUE, CHECK", "สร้าง/อัปเกรด schema เองตอนเปิด"]} />
+            <Box icon={Database} title={`SQLite ${sqlite}`} tone="violet" items={["ไฟล์ data/his.db", `${journal.toUpperCase()} journal`, "Foreign keys, UNIQUE, CHECK", "สร้าง/อัปเกรด schema เองตอนเปิด"]} />
           </div>
           <div className="mt-4 grid min-w-[760px] grid-cols-2 gap-3 text-sm">
-            <Box title="🚚 Outlab (ภายนอก)" tone="amber" items={["ส่งผลกลับเป็นไฟล์ HL7 ORU^R01", "นำเข้าที่หน้า ลงผล → แท็บ Outlab", "ระบบติดธงใหม่ด้วยค่าอ้างอิงของเรา"]} />
-            <Box title="✨ Claude API (ไม่บังคับ)" tone="slate" items={["เรียกเมื่อแพทย์กดสรุปเท่านั้น", "ส่งเพศ อายุ ผลที่ verify แล้ว ไม่ส่งชื่อ/HN/เลขบัตร", "ไม่มี key หรือล่ม → สรุปแบบกฎ"]} />
+            <Box icon={Truck} title="Outlab (ภายนอก)" tone="amber" items={["ส่งผลกลับเป็นไฟล์ HL7 ORU^R01", "นำเข้าที่หน้า ลงผล → แท็บ Outlab", "ระบบติดธงใหม่ด้วยค่าอ้างอิงของเรา"]} />
+            <Box icon={Sparkles} title="Claude API (ไม่บังคับ)" tone="slate" items={["เรียกเมื่อแพทย์กดสรุปเท่านั้น", "ส่งเพศ อายุ ผลที่ verify แล้ว ไม่ส่งชื่อ/HN/เลขบัตร", "ไม่มี key หรือล่ม → สรุปแบบกฎ"]} />
           </div>
         </div>
       </section>
@@ -258,7 +260,7 @@ export default function AboutPage() {
                           return (
                             <tr key={c.name} className="border-t border-slate-50">
                               <td className="px-4 py-1 font-mono">
-                                {c.pk ? "🔑 " : ""}
+                                {c.pk ? <KeyRound className="mr-1 inline h-3 w-3 text-amber-600" aria-label="primary key" /> : null}
                                 {c.name}
                               </td>
                               <td className="py-1 font-mono text-slate-500">{c.type || "—"}</td>
@@ -345,10 +347,13 @@ const TONES = {
   slate: "border-slate-200 bg-slate-50",
 };
 
-function Box({ title, items, tone }: { title: string; items: string[]; tone: keyof typeof TONES }) {
+function Box({ icon: Icon, title, items, tone }: { icon: LucideIcon; title: string; items: string[]; tone: keyof typeof TONES }) {
   return (
     <div className={`rounded-xl border p-3 ${TONES[tone]}`}>
-      <div className="font-semibold">{title}</div>
+      <div className="flex items-center gap-1.5 font-semibold">
+        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+        {title}
+      </div>
       <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-slate-600">
         {items.map((i) => (
           <li key={i}>{i}</li>

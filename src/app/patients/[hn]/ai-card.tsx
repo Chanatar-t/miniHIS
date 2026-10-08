@@ -1,4 +1,5 @@
 "use client";
+import { Sparkles, TriangleAlert } from "lucide-react";
 
 import { useActionState } from "react";
 import { aiSummary, type AiState } from "../ai-actions";
@@ -20,7 +21,7 @@ export function AiSummaryCard({ patientId }: { patientId: number }) {
         <h2 className="font-semibold">สรุปผล Lab</h2>
         <span className="text-xs text-slate-500">ส่งเฉพาะเพศ อายุ และผลที่ verify แล้ว ไม่ส่งชื่อ/HN/เลขบัตร</span>
         <button disabled={pending} className="btn ml-auto">
-          {pending ? "กำลังสรุป…" : s ? "สรุปใหม่" : "✨ สรุปด้วย AI"}
+          {pending ? "กำลังสรุป…" : s ? "สรุปใหม่" : <><Sparkles className="h-4 w-4" aria-hidden /> สรุปด้วย AI</>}
         </button>
       </form>
 
@@ -32,7 +33,7 @@ export function AiSummaryCard({ patientId }: { patientId: number }) {
             </span>
             <p className="font-medium">{s.headline}</p>
           </div>
-          {s.warning && <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">⚠ {s.warning}</p>}
+          {s.warning && <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800"><TriangleAlert className="mr-1 inline h-3.5 w-3.5" aria-hidden />{s.warning}</p>}
           <ul className="stagger grid gap-2 sm:grid-cols-2">
             {s.findings.map((f, i) => (
               <li key={i} className={`rounded-md border-l-4 px-3 py-2 text-sm ${SEV[f.severity]}`}>

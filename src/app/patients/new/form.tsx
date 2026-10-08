@@ -1,4 +1,5 @@
 "use client";
+import { Check, Dices } from "lucide-react";
 
 import { startTransition, useActionState, useState } from "react";
 import { cidCheckDigit, isValidCid } from "@/lib/rules";
@@ -52,7 +53,7 @@ export function PatientForm({ initial = {}, bare, onCancel }: { initial?: Record
           </label>
           {/* demo / UAT helper: real IDs have a check digit, random typing fails ~9 in 10 */}
           <button type="button" onClick={() => setCid(randomCid())} className="text-xs text-teal-700 hover:underline">
-            🎲 สุ่มเลขทดสอบ
+            <Dices className="mr-1 inline h-3.5 w-3.5" aria-hidden />สุ่มเลขทดสอบ
           </button>
         </div>
         <input
@@ -73,7 +74,7 @@ export function PatientForm({ initial = {}, bare, onCancel }: { initial?: Record
           {cidState === "bad"
             ? "หลักสุดท้ายไม่ตรงกับเลขตรวจสอบ ตรวจกับบัตรอีกครั้ง"
             : cidState === "ok"
-              ? "✓ รูปแบบเลขบัตรถูกต้อง"
+              ? <><Check className="mr-0.5 inline h-3.5 w-3.5 text-emerald-600" aria-hidden />รูปแบบเลขบัตรถูกต้อง</>
               : `${cid.length}/13 หลัก · หลักที่ 13 เป็นเลขตรวจสอบ ระบบตรวจให้อัตโนมัติ`}
         </p>
       </div>

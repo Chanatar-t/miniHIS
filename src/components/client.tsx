@@ -1,4 +1,5 @@
 "use client";
+import { Printer } from "lucide-react";
 
 import { useEffect, useRef, ViewTransition } from "react";
 import Link from "next/link";
@@ -47,7 +48,7 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`rounded-md px-2.5 py-1.5 ${active ? "bg-teal-50 font-medium text-teal-800" : "text-slate-600 hover:bg-slate-50 hover:text-teal-700"} transition-colors duration-150`}
+      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 ${active ? "bg-teal-50 font-medium text-teal-800" : "text-slate-600 hover:bg-slate-50 hover:text-teal-700"} transition-colors duration-150`}
     >
       {children}
     </Link>
@@ -70,7 +71,7 @@ export function AutoSubmitSelect(props: React.ComponentProps<"select">) {
 export function PrintButton({ label = "พิมพ์" }: { label?: string }) {
   return (
     <button type="button" onClick={() => window.print()} className="btn no-print">
-      🖨 {label}
+      <Printer className="h-4 w-4" aria-hidden /> {label}
     </button>
   );
 }

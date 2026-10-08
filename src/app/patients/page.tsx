@@ -1,3 +1,4 @@
+import { Check, CircleCheck, SearchX } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -50,7 +51,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
             <span className="text-3xl font-bold leading-none">{queueNo(opened.vn)}</span>
           </div>
           <div className="flex-1">
-            <div className="text-lg font-semibold text-emerald-900">✓ เปิด Visit ให้ {fullName(opened)} แล้ว</div>
+            <div className="flex items-center gap-1.5 text-lg font-semibold text-emerald-900"><CircleCheck className="h-5 w-5" aria-hidden /> เปิด Visit ให้ {fullName(opened)} แล้ว</div>
             <div className="text-sm text-emerald-800">
               {opened.vn} · {SCHEME[opened.scheme]}
             </div>
@@ -91,9 +92,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
 
           {q && rows.length === 0 && (
             <div className="card animate-fade-up space-y-3 text-center">
-              <div className="text-4xl" aria-hidden>
-                🔍
-              </div>
+              <SearchX className="mx-auto h-10 w-10 text-slate-400" aria-hidden />
               <div className="font-medium">ไม่พบผู้ป่วย “{q}”</div>
               <p className="text-sm text-slate-500">ตรวจตัวสะกดอีกครั้ง ถ้าเป็นผู้ป่วยใหม่ให้ลงทะเบียน</p>
               {isClerk && (
@@ -120,7 +119,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
                     </div>
                   </div>
                   {v ? (
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm text-emerald-800">✓ มี Visit วันนี้ · คิว {queueNo(v.vn)}</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-sm text-emerald-800"><Check className="h-4 w-4" aria-hidden /> มี Visit วันนี้ · คิว {queueNo(v.vn)}</span>
                   ) : isClerk ? (
                     <form action={openVisit} className="flex items-center gap-2">
                       <input type="hidden" name="patientId" value={p.id} />

@@ -67,7 +67,7 @@ export async function proposeRange(_: ActionState, formData: FormData): Promise<
     });
   });
   if (err) return err;
-  redirect(`/config/${code}?msg=${encodeURIComponent("✓ ส่งข้อเสนอแล้ว รอผู้มีสิทธิ์อนุมัติ (ยังไม่มีผลกับผู้ป่วยจนกว่าจะอนุมัติ)")}#pending`);
+  redirect(`/config/${code}?msg=${encodeURIComponent("ส่งข้อเสนอแล้ว รอผู้มีสิทธิ์อนุมัติ (ยังไม่มีผลกับผู้ป่วยจนกว่าจะอนุมัติ)")}#pending`);
 }
 
 // Maker-checker: approver needs the permission and cannot be the proposer
@@ -93,7 +93,7 @@ export async function reviewRange(formData: FormData) {
       // a new test becomes orderable with its first approved range
       if (decision === "APPROVED") db.prepare("UPDATE lab_tests SET active = 1 WHERE id = ? AND active = 0").run(r.test_id);
       audit(db, user.id, decision === "APPROVED" ? "APPROVE_RANGE" : "REJECT_RANGE", "test_range", id, note || undefined);
-      return decision === "APPROVED" ? "✓ อนุมัติแล้ว ค่าใหม่มีผลตามวันที่เริ่มใช้" : "บันทึกการไม่อนุมัติแล้ว";
+      return decision === "APPROVED" ? "อนุมัติแล้ว ค่าใหม่มีผลตามวันที่เริ่มใช้" : "บันทึกการไม่อนุมัติแล้ว";
     });
   });
 }
@@ -135,5 +135,5 @@ export async function createTest(_: ActionState, formData: FormData): Promise<Ac
     });
   });
   if (err) return err;
-  redirect(`/config/${code}?msg=${encodeURIComponent("✓ สร้างรายการตรวจแล้ว จะสั่งได้หลังอนุมัติค่าอ้างอิงชุดแรก")}`);
+  redirect(`/config/${code}?msg=${encodeURIComponent("สร้างรายการตรวจแล้ว จะสั่งได้หลังอนุมัติค่าอ้างอิงชุดแรก")}`);
 }

@@ -1,3 +1,4 @@
+import { Workflow } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
@@ -47,7 +48,7 @@ export default async function GuidePage() {
         className="group flex flex-wrap items-center gap-4 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 to-white p-5 transition hover:shadow-md"
       >
         <span className="text-3xl" aria-hidden>
-          🔄
+          <Workflow className="h-8 w-8 text-violet-600" aria-hidden />
         </span>
         <div className="flex-1">
           <div className="font-semibold">การไหลของข้อมูลและสถานะทั้งหมด</div>
@@ -83,9 +84,7 @@ export default async function GuidePage() {
             return (
               <li key={f.title} className={`relative rounded-xl border p-3 ${TONE[g.tone].soft}`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-2xl" aria-hidden>
-                    {f.icon}
-                  </span>
+                  <f.icon className={`h-6 w-6 ${TONE[g.tone].text}`} aria-hidden />
                   <span className="text-xs font-semibold text-slate-400">{i + 1}</span>
                 </div>
                 <div className="mt-2 text-sm font-semibold leading-snug">{f.title}</div>
@@ -106,7 +105,7 @@ export default async function GuidePage() {
               <article key={g.slug} className="card card-hover flex flex-col gap-4">
                 <div className="flex items-start gap-4">
                   <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl ${t.soft} border`} aria-hidden>
-                    {g.icon}
+                    <g.icon className={`h-6 w-6 ${t.text}`} />
                   </span>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold">{g.name}</h3>

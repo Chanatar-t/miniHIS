@@ -1,4 +1,5 @@
 "use client";
+import { X } from "lucide-react";
 
 import { useEffect, useRef, useState } from "react";
 import { PatientForm } from "./new/form";
@@ -15,8 +16,8 @@ export function OpenRegisterButton({ children, className }: { children: React.Re
 }
 
 // Registration in a floating dialog. Rule: never lose typed data by accident.
-// Clean form  -> backdrop click / Esc / ✕ close it.
-// Dirty form  -> backdrop click does nothing but warn; Esc / ✕ / ยกเลิก ask "discard?" first.
+// Clean form  -> backdrop click / Esc / close button close it.
+// Dirty form  -> backdrop click does nothing but warn; Esc / close / ยกเลิก ask "discard?" first.
 // "Dirty" = differs from the fresh form (pre-filled search text is not dirty). Closed while dirty -> "draft" badge.
 export function RegisterModal({ initial, children, className }: { initial: Record<string, string>; children: React.ReactNode; className: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -108,7 +109,7 @@ export function RegisterModal({ initial, children, className }: { initial: Recor
               <p className="text-xs text-slate-500">บันทึกแล้วได้ HN ทันที และเปิด Visit ต่อได้เลย</p>
             </div>
             <button type="button" onClick={tryClose} aria-label="ปิด" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100">
-              ✕
+              <X className="h-5 w-5" aria-hidden />
             </button>
           </div>
 

@@ -1,3 +1,4 @@
+import { BadgeCheck, BookOpen, Blocks, FileInput, ShieldCheck, SlidersHorizontal, Stethoscope, TestTubeDiagonal, Workflow } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db, audit } from "@/lib/db";
@@ -24,13 +25,13 @@ const ROLE: Record<string, { label: string; does: string; cls: string }> = {
 const FLOW = ["ลงทะเบียน", "เปิด Visit", "แพทย์สั่ง Lab", "เจาะเลือด + barcode", "รับเข้า Lab", "ส่ง Outlab", "ผล HL7", "Verify 2 คน", "แพทย์อ่านผล"];
 
 const HIGHLIGHTS = [
-  ["🧪", "ตามรอยทุกหลอด", "Accession barcode, แยกหลอดอัตโนมัติ, ใบนำส่งแยกตาม Outlab, reject แล้วเจาะซ้ำให้เอง"],
-  ["📨", "รับผลจาก Outlab (HL7)", "จับคู่ด้วย Accession + รหัส test ของ Outlab, นำเข้าซ้ำไม่ได้, ติดธงด้วยค่าอ้างอิงของเราเอง"],
-  ["✅", "ความปลอดภัยของผู้ป่วย", "Verify แบบ four-eyes, ค่าวิกฤตต้องบันทึกการแจ้ง, แพทย์ไม่เห็นผลที่ยังไม่ตรวจทาน"],
-  ["⚙", "ค่าอ้างอิงมีเวอร์ชัน", "แยกเพศ/อายุ, เสนอ → ดูผลกระทบ → อนุมัติโดยพยาธิแพทย์, ผลเก่าไม่เปลี่ยนตาม"],
-  ["🩺", "แพทย์อ่านค่าจริงก่อน", "ผลครั้งนี้เทียบครั้งก่อน ↑↓, ใบรายงานรวมทั้ง Visit, AI เป็นตัวช่วยที่พับไว้"],
-  ["🛡", "PDPA & Audit", "สิทธิ์ตามบทบาทตรวจที่ server, ให้ข้อมูลเท่าที่จำเป็น, บันทึกทุกการเปิดดู"],
-];
+  [TestTubeDiagonal, "ตามรอยทุกหลอด", "Accession barcode, แยกหลอดอัตโนมัติ, ใบนำส่งแยกตาม Outlab, reject แล้วเจาะซ้ำให้เอง"],
+  [FileInput, "รับผลจาก Outlab (HL7)", "จับคู่ด้วย Accession + รหัส test ของ Outlab, นำเข้าซ้ำไม่ได้, ติดธงด้วยค่าอ้างอิงของเราเอง"],
+  [BadgeCheck, "ความปลอดภัยของผู้ป่วย", "Verify แบบ four-eyes, ค่าวิกฤตต้องบันทึกการแจ้ง, แพทย์ไม่เห็นผลที่ยังไม่ตรวจทาน"],
+  [SlidersHorizontal, "ค่าอ้างอิงมีเวอร์ชัน", "แยกเพศ/อายุ, เสนอ → ดูผลกระทบ → อนุมัติโดยพยาธิแพทย์, ผลเก่าไม่เปลี่ยนตาม"],
+  [Stethoscope, "แพทย์อ่านค่าจริงก่อน", "ผลครั้งนี้เทียบครั้งก่อน ↑↓, ใบรายงานรวมทั้ง Visit, AI เป็นตัวช่วยที่พับไว้"],
+  [ShieldCheck, "PDPA & Audit", "สิทธิ์ตามบทบาทตรวจที่ server, ให้ข้อมูลเท่าที่จำเป็น, บันทึกทุกการเปิดดู"],
+] as const;
 
 export default function LoginPage() {
   const users = db.prepare("SELECT id, name, role, can_approve_config FROM users ORDER BY id").all() as U[];
@@ -63,10 +64,10 @@ export default function LoginPage() {
         </ol>
 
         <div className="stagger grid gap-3 sm:grid-cols-2">
-          {HIGHLIGHTS.map(([icon, title, desc]) => (
+          {HIGHLIGHTS.map(([Icon, title, desc]) => (
             <div key={title} className="card flex gap-3">
-              <span className="text-xl" aria-hidden>
-                {icon}
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+                <Icon className="h-5 w-5" aria-hidden />
               </span>
               <div>
                 <div className="font-semibold">{title}</div>
@@ -78,13 +79,13 @@ export default function LoginPage() {
 
         <div className="flex flex-wrap gap-2">
           <Link href="/about" className="btn">
-            🏗 โครงสร้างระบบ (stack · schema · ทุกหน้า)
+            <Blocks className="h-4 w-4" aria-hidden /> โครงสร้างระบบ (stack · schema · ทุกหน้า)
           </Link>
           <Link href="/guide/flow" className="btn-ghost">
-            🔄 การไหลของข้อมูล
+            <Workflow className="h-4 w-4" aria-hidden /> การไหลของข้อมูล
           </Link>
           <Link href="/guide" className="btn-ghost">
-            📘 คู่มือ / UAT
+            <BookOpen className="h-4 w-4" aria-hidden /> คู่มือ / UAT
           </Link>
         </div>
         <p className="text-xs text-slate-500">Next.js 16 · React 19 · TypeScript · SQLite (node:sqlite) · Tailwind CSS · Zod · Claude API (ไม่บังคับ)</p>

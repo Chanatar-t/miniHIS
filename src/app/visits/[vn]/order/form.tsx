@@ -1,4 +1,5 @@
 "use client";
+import { TriangleAlert, X } from "lucide-react";
 
 import { useState } from "react";
 import { createOrder } from "./actions";
@@ -97,7 +98,7 @@ export function OrderForm({ visitId, catalog, recentIds }: { visitId: number; ca
                 <td>
                   <span className="font-mono font-semibold">{t.code}</span> {t.name}
                   {recentIds.includes(t.id) && (
-                    <div className="text-xs text-amber-700">⚠ ผู้ป่วยได้รับการสั่ง test นี้แล้วภายใน 7 วัน</div>
+                    <div className="text-xs text-amber-700"><TriangleAlert className="mr-1 inline h-3.5 w-3.5" aria-hidden />ผู้ป่วยได้รับการสั่ง test นี้แล้วภายใน 7 วัน</div>
                   )}
                 </td>
                 <td className="text-xs">
@@ -110,7 +111,7 @@ export function OrderForm({ visitId, catalog, recentIds }: { visitId: number; ca
                 <td className="text-right">{t.price.toLocaleString()}</td>
                 <td>
                   <button type="button" onClick={() => setPicked(picked.filter((x) => x !== t))} className="text-slate-400 hover:text-red-600" aria-label={`ลบ ${t.code}`}>
-                    ✕
+                    <X className="h-4 w-4" aria-hidden />
                   </button>
                 </td>
               </tr>

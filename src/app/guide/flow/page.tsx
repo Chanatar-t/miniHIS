@@ -1,4 +1,8 @@
 import Link from "next/link";
+import {
+  BadgeCheck, ClipboardList, FileInput, Flag, Inbox, Microscope, Package, ReceiptText, Tag, TestTubeDiagonal, Truck,
+  type LucideIcon,
+} from "lucide-react";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { ITEM_STATUS, ORDER_STATUS, FLAG, REJECT_REASONS, DUE_OFFSET } from "@/lib/labels";
@@ -12,7 +16,7 @@ export const metadata: Metadata = { title: "การไหลของข้อ
 type Main = {
   key: string;
   step: number;
-  icon: string;
+  icon: LucideIcon;
   meaning: string;
   parcel: string; // parcel-tracking analogy
   enter: string;
@@ -31,7 +35,7 @@ const MAIN: Main[] = [
   {
     key: "ORDERED",
     step: 1,
-    icon: "📝",
+    icon: ClipboardList,
     meaning: "แพทย์สั่งตรวจแล้ว แต่ยังไม่ได้เจาะเลือด",
     parcel: "กดสั่งของในแอปแล้ว ร้านยังไม่ได้แพ็ก",
     enter: "แพทย์กด ยืนยันสั่ง Lab",
@@ -46,7 +50,7 @@ const MAIN: Main[] = [
   {
     key: "COLLECTED",
     step: 2,
-    icon: "🏷️",
+    icon: Tag,
     meaning: "เจาะเลือดแล้ว ติดฉลาก barcode แล้ว หลอดกำลังเดินทางมาห้อง Lab",
     parcel: "แพ็กกล่องแล้ว แปะเลขพัสดุแล้ว รอขนส่งมารับ",
     enter: "Lab กด เก็บแล้ว + พิมพ์ฉลาก (ระบบแยกหลอดให้)",
@@ -57,7 +61,7 @@ const MAIN: Main[] = [
   {
     key: "RECEIVED",
     step: 3,
-    icon: "📥",
+    icon: Inbox,
     meaning: "หลอดมาถึงห้อง Lab แล้ว จากนี้แยกเป็น 2 เส้นทาง",
     parcel: "พัสดุถึงศูนย์คัดแยก",
     enter: "สแกน barcode ที่หน้า รับเข้า Lab",
@@ -72,7 +76,7 @@ const MAIN: Main[] = [
   {
     key: "SENT",
     step: 4,
-    icon: "🚚",
+    icon: Truck,
     meaning: "ส่งหลอดออกไปตรวจที่ห้องปฏิบัติการภายนอก (Outlab) แล้ว",
     parcel: "ฝากต่อให้บริษัทขนส่งอีกเจ้า",
     enter: "Lab กด ยืนยันส่ง ในใบนำส่ง",
@@ -81,13 +85,13 @@ const MAIN: Main[] = [
     outlabOnly: true,
     subs: [
       { label: "ยังไม่ถึงกำหนดได้ผล", detail: "ภายในจำนวนวัน (TAT) ของ test นั้น", count: (r) => r.filter((x) => !x.overdue).length },
-      { label: "เกินกำหนดได้ผล", detail: "ขึ้นตัวแดง ⚠ เกินกำหนด ที่หน้าลงผล ควรโทรตาม Outlab", count: (r) => r.filter((x) => x.overdue).length },
+      { label: "เกินกำหนดได้ผล", detail: "ขึ้นตัวแดง เกินกำหนดได้ผล ที่หน้าลงผล ควรโทรตาม Outlab", count: (r) => r.filter((x) => x.overdue).length },
     ],
   },
   {
     key: "RESULTED",
     step: 5,
-    icon: "🧾",
+    icon: ReceiptText,
     meaning: "มีผลแล้ว แต่ยังไม่ได้ตรวจทาน แพทย์จึงยังไม่เห็นตัวเลข",
     parcel: "ของถึงแล้ว รอตรวจสภาพก่อนส่งมอบ",
     enter: "คีย์ผล หรือนำเข้าไฟล์ HL7 จาก Outlab (ระบบติดธงสูง/ต่ำให้อัตโนมัติ)",
@@ -103,7 +107,7 @@ const MAIN: Main[] = [
   {
     key: "VERIFIED",
     step: 6,
-    icon: "✅",
+    icon: BadgeCheck,
     meaning: "ตรวจทานแล้ว รายงานผลให้แพทย์ จบงาน",
     parcel: "ส่งถึงมือผู้รับ เซ็นรับแล้ว",
     enter: "เจ้าหน้าที่คนที่สองกด Verify และรายงานผล",
@@ -168,7 +172,7 @@ export default async function FlowPage() {
           อธิบายให้เข้าใจได้โดยไม่ต้องมีพื้นฐานไอที ทุกสถานะใช้ชื่อและสีเดียวกับบนหน้าจอจริง และตัวเลขในหน้านี้ดึงจากระบบตอนนี้
         </p>
         <div className="mt-6 max-w-2xl rounded-xl bg-white/10 p-4 ring-1 ring-white/30">
-          <div className="font-semibold">📦 นึกถึงการติดตามพัสดุ</div>
+          <div className="flex items-center gap-1.5 font-semibold"><Package className="h-5 w-5" aria-hidden /> นึกถึงการติดตามพัสดุ</div>
           <p className="mt-1 text-sm text-violet-50">
             สั่งของ → แพ็ก → ถึงศูนย์คัดแยก → ส่งต่อ → ถึงปลายทาง → เซ็นรับ หลอดเลือดหนึ่งหลอดก็เดินทางแบบเดียวกัน
             และระบบบันทึกทุกจุดว่าใครทำ เมื่อไร เหมือนเลขพัสดุที่เช็กได้ตลอดทาง
@@ -183,16 +187,14 @@ export default async function FlowPage() {
           <p className="text-sm text-slate-600">ตัวอย่าง: แพทย์สั่ง 4 test ในใบเดียว</p>
         </div>
         <div className="grid gap-4 lg:grid-cols-4">
-          {[
-            ["🗒️", "ใบสั่ง (Order)", "ที่แพทย์สั่งในครั้งเดียว", "1 ใบ"],
-            ["🔬", "รายการตรวจ (Test)", "แต่ละรายการในใบสั่ง สถานะหลักอยู่ที่ระดับนี้", "4 รายการ"],
-            ["🧪", "หลอด (Specimen)", "test ที่ใช้หลอดเดียวกันและไปที่เดียวกันใช้หลอดร่วมกัน", "3 หลอด"],
-            ["📦", "ใบนำส่ง (Shipment)", "รวมหลอดที่ส่ง Outlab เดียวกันในรอบเดียว", "1 ใบ"],
-          ].map(([icon, name, desc, ex]) => (
+          {([
+            [ClipboardList, "ใบสั่ง (Order)", "ที่แพทย์สั่งในครั้งเดียว", "1 ใบ"],
+            [Microscope, "รายการตรวจ (Test)", "แต่ละรายการในใบสั่ง สถานะหลักอยู่ที่ระดับนี้", "4 รายการ"],
+            [TestTubeDiagonal, "หลอด (Specimen)", "test ที่ใช้หลอดเดียวกันและไปที่เดียวกันใช้หลอดร่วมกัน", "3 หลอด"],
+            [Package, "ใบนำส่ง (Shipment)", "รวมหลอดที่ส่ง Outlab เดียวกันในรอบเดียว", "1 ใบ"],
+          ] as const).map(([Icon, name, desc, ex]) => (
             <div key={name} className="card">
-              <div className="text-2xl" aria-hidden>
-                {icon}
-              </div>
+              <Icon className="h-7 w-7 text-violet-600" aria-hidden />
               <div className="mt-2 font-semibold">{name}</div>
               <p className="text-sm text-slate-600">{desc}</p>
               <div className="mt-2 text-xs font-medium text-violet-700">ในตัวอย่าง: {ex}</div>
@@ -204,25 +206,25 @@ export default async function FlowPage() {
         <div className="card overflow-x-auto">
           <div className="min-w-[640px] space-y-3 text-sm">
             <div className="rounded-xl border-2 border-dashed border-slate-300 p-3">
-              <div className="mb-2 font-semibold">🗒️ ใบสั่ง #1 · นพ.ธนา · STAT</div>
+              <div className="mb-2 flex items-center gap-1.5 font-semibold"><ClipboardList className="h-4 w-4" aria-hidden /> ใบสั่ง #1 · นพ.ธนา · STAT</div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-lg border border-violet-300 bg-violet-50 p-2">
-                  <div className="font-medium">🧪 หลอดแดง → Outlab A</div>
+                  <div className="flex items-center gap-1 font-medium"><TestTubeDiagonal className="h-4 w-4" aria-hidden /> หลอดแดง → Outlab A</div>
                   <div className="mt-1 flex gap-1">
                     <span className="rounded bg-white px-1.5 ring-1 ring-violet-200">TSH</span>
                     <span className="rounded bg-white px-1.5 ring-1 ring-violet-200">FT4</span>
                   </div>
-                  <div className="mt-2 text-xs text-violet-700">📦 อยู่ในใบนำส่ง SH...001</div>
+                  <div className="mt-2 flex items-center gap-1 text-xs text-violet-700"><Package className="h-3.5 w-3.5" aria-hidden /> อยู่ในใบนำส่ง SH...001</div>
                 </div>
                 <div className="rounded-lg border border-violet-300 bg-violet-50 p-2">
-                  <div className="font-medium">🧪 หลอดม่วง → Outlab A</div>
+                  <div className="flex items-center gap-1 font-medium"><TestTubeDiagonal className="h-4 w-4" aria-hidden /> หลอดม่วง → Outlab A</div>
                   <div className="mt-1 flex gap-1">
                     <span className="rounded bg-white px-1.5 ring-1 ring-violet-200">HbA1c</span>
                   </div>
-                  <div className="mt-2 text-xs text-violet-700">📦 อยู่ในใบนำส่ง SH...001</div>
+                  <div className="mt-2 flex items-center gap-1 text-xs text-violet-700"><Package className="h-3.5 w-3.5" aria-hidden /> อยู่ในใบนำส่ง SH...001</div>
                 </div>
                 <div className="rounded-lg border border-teal-300 bg-teal-50 p-2">
-                  <div className="font-medium">🧪 หลอดแดง → ตรวจในโรงพยาบาล</div>
+                  <div className="flex items-center gap-1 font-medium"><TestTubeDiagonal className="h-4 w-4" aria-hidden /> หลอดแดง → ตรวจในโรงพยาบาล</div>
                   <div className="mt-1 flex gap-1">
                     <span className="rounded bg-white px-1.5 ring-1 ring-teal-200">CREA</span>
                   </div>
@@ -249,8 +251,8 @@ export default async function FlowPage() {
             const items = byStatus.get(m.key) ?? [];
             return (
               <li key={m.key} className="relative">
-                <span className="absolute -left-[39px] top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg ring-2 ring-slate-200 sm:-left-[47px]" aria-hidden>
-                  {m.icon}
+                <span className="absolute -left-[39px] top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white text-violet-600 ring-2 ring-slate-200 sm:-left-[47px]" aria-hidden>
+                  <m.icon className="h-4 w-4" />
                 </span>
                 <article className="card space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -262,7 +264,7 @@ export default async function FlowPage() {
                     </span>
                   </div>
                   <p className="text-lg font-medium">{m.meaning}</p>
-                  <p className="text-sm text-slate-500">📦 เหมือน: {m.parcel}</p>
+                  <p className="flex items-center gap-1 text-sm text-slate-500"><Package className="h-4 w-4 shrink-0" aria-hidden /> เหมือน: {m.parcel}</p>
                   <dl className="grid gap-2 text-sm sm:grid-cols-3">
                     <div className="rounded-lg bg-slate-50 p-2">
                       <dt className="text-xs font-semibold text-slate-500">เข้าสถานะนี้เมื่อ</dt>
@@ -393,7 +395,7 @@ export default async function FlowPage() {
         <h2 className="text-xl font-semibold">สถานะอื่นที่จะเห็นในระบบ</h2>
         <div className="grid gap-4 lg:grid-cols-3">
           <article className="card space-y-2">
-            <h3 className="font-semibold">📦 ใบนำส่ง</h3>
+            <h3 className="flex items-center gap-1.5 font-semibold"><Package className="h-5 w-5 text-violet-600" aria-hidden /> ใบนำส่ง</h3>
             <div className="flex items-center gap-2 text-sm">
               <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">ร่าง (ยังไม่ส่ง)</span>→
               <span className="rounded bg-violet-100 px-2 py-0.5 text-xs text-violet-800">ส่งแล้ว</span>
@@ -404,7 +406,7 @@ export default async function FlowPage() {
             <p className="text-xs text-slate-500">ต่อยอด: สถานะ Outlab ยืนยันรับของ (มีที่ไว้ในฐานข้อมูลแล้ว)</p>
           </article>
           <article className="card space-y-2">
-            <h3 className="font-semibold">🚩 ธงของผลตรวจ</h3>
+            <h3 className="flex items-center gap-1.5 font-semibold"><Flag className="h-5 w-5 text-red-600" aria-hidden /> ธงของผลตรวจ</h3>
             <p className="text-sm text-slate-600">ตัวอย่างค่าน้ำตาล (ปกติ 70-100, วิกฤตต่ำกว่า 40 หรือสูงกว่า 500)</p>
             <ul className="space-y-1 text-sm">
               {(
@@ -426,7 +428,7 @@ export default async function FlowPage() {
             <p className="text-xs text-slate-500">ระบบติดธงจากค่าอ้างอิงของโรงพยาบาลเราเอง ไม่ใช้ธงที่ Outlab ส่งมา</p>
           </article>
           <article className="card space-y-2">
-            <h3 className="font-semibold">📨 ไฟล์ผลจาก Outlab (HL7)</h3>
+            <h3 className="flex items-center gap-1.5 font-semibold"><FileInput className="h-5 w-5 text-violet-600" aria-hidden /> ไฟล์ผลจาก Outlab (HL7)</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">รับครบ</span> ทุกผลจับคู่กับหลอดได้

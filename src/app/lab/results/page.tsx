@@ -1,3 +1,4 @@
+import { CircleCheck, FileInput, Microscope, TestTubeDiagonal, TriangleAlert, Truck } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -54,10 +55,10 @@ export default async function ResultsPage({ searchParams }: PageProps<"/lab/resu
       <div className="grid gap-3 sm:grid-cols-2" role="tablist">
         {(
           [
-            ["in", "🔬", "ตรวจในโรงพยาบาล", "คีย์ผลจากเครื่องตรวจในห้อง Lab", inhouse.length],
-            ["out", "🚚", "รอผลจาก Outlab", "นำเข้าไฟล์ผลที่ Outlab ส่งมา หรือคีย์เอง", outlab.length],
+            ["in", Microscope, "ตรวจในโรงพยาบาล", "คีย์ผลจากเครื่องตรวจในห้อง Lab", inhouse.length],
+            ["out", Truck, "รอผลจาก Outlab", "นำเข้าไฟล์ผลที่ Outlab ส่งมา หรือคีย์เอง", outlab.length],
           ] as const
-        ).map(([key, icon, title, desc, n]) => (
+        ).map(([key, Icon, title, desc, n]) => (
           <Link
             key={key}
             href={`/lab/results?tab=${key}`}
@@ -65,9 +66,7 @@ export default async function ResultsPage({ searchParams }: PageProps<"/lab/resu
             aria-selected={tab === key}
             className={`flex items-center gap-3 rounded-xl border-2 p-4 transition ${tab === key ? "border-violet-500 bg-violet-50" : "border-slate-200 bg-white hover:border-violet-300"}`}
           >
-            <span className="text-2xl" aria-hidden>
-              {icon}
-            </span>
+            <Icon className="h-7 w-7 text-violet-600" aria-hidden />
             <span className="flex-1">
               <span className="block font-semibold">{title}</span>
               <span className="block text-xs text-slate-500">{desc}</span>
@@ -94,7 +93,7 @@ export default async function ResultsPage({ searchParams }: PageProps<"/lab/resu
         <div className="space-y-4">
           <form action={importHl7} className="card space-y-3 border-violet-200">
             <div>
-              <h2 className="font-semibold">📥 นำเข้าไฟล์ผลจาก Outlab</h2>
+              <h2 className="flex items-center gap-1.5 font-semibold"><FileInput className="h-5 w-5 text-violet-600" aria-hidden /> นำเข้าไฟล์ผลจาก Outlab</h2>
               <p className="text-sm text-slate-500">
                 Outlab ส่งผลมาเป็นไฟล์มาตรฐาน HL7 (.hl7) เลือกไฟล์แล้วกดนำเข้า ระบบจับคู่กับหลอดด้วยเลข Accession และติดธงสูง/ต่ำให้เอง
               </p>
@@ -146,13 +145,13 @@ function Tubes({ rows }: { rows: Row[] }) {
         return (
           <form key={s.accession_no} action={saveResults} className={`card space-y-2 ${s.priority === "STAT" ? "border-red-300" : ""}`}>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <span className="font-mono font-semibold">🧪 {s.accession_no}</span>
+              <span className="inline-flex items-center gap-1 font-mono font-semibold"><TestTubeDiagonal className="h-4 w-4 text-violet-600" aria-hidden />{s.accession_no}</span>
               {s.priority === "STAT" && <b className="text-red-600">STAT</b>}
               <span className="font-medium">{s.patient}</span>
               <span className="font-mono text-xs text-slate-500">{s.hn}</span>
               {s.outlab && <span className="rounded bg-violet-50 px-2 py-0.5 text-xs text-violet-700">{s.outlab}</span>}
               <span className={`ml-auto text-xs ${s.overdue ? "font-semibold text-red-600" : "text-slate-500"}`}>
-                {s.overdue ? "⚠ เกินกำหนดได้ผล " : "กำหนดได้ผล "}
+                {s.overdue ? <><TriangleAlert className="mr-0.5 inline h-3.5 w-3.5" aria-hidden />เกินกำหนดได้ผล </> : "กำหนดได้ผล "}
                 {thDate(s.due)}
               </span>
             </div>
@@ -184,9 +183,7 @@ function Empty({ title, hints }: { title: string; hints: Hint[] }) {
   const h = hints.filter(Boolean) as Exclude<Hint, false>[];
   return (
     <div className="card animate-fade-up space-y-3 py-8 text-center">
-      <div className="text-4xl" aria-hidden>
-        ✅
-      </div>
+      <CircleCheck className="mx-auto h-10 w-10 text-emerald-500" aria-hidden />
       <div className="font-semibold">{title}</div>
       {h.length > 0 ? (
         <ul className="mx-auto max-w-lg space-y-2 text-left">

@@ -60,7 +60,7 @@ export async function receiveSpecimen(formData: FormData) {
           "SELECT max(ol.code) AS o FROM lab_order_items i JOIN lab_tests t ON t.id = i.test_id LEFT JOIN outlabs ol ON ol.id = t.outlab_id WHERE i.specimen_id = ?",
         )
         .get(s.id) as { o: string | null };
-      return `✓ รับ ${acc} เข้า Lab แล้ว · ขั้นต่อไป: ${outlab.o ? `ส่ง Outlab (${outlab.o})` : "ลงผล (ตรวจในโรงพยาบาล)"}`;
+      return `รับ ${acc} เข้า Lab แล้ว · ขั้นต่อไป: ${outlab.o ? `ส่ง Outlab (${outlab.o})` : "ลงผล (ตรวจในโรงพยาบาล)"}`;
     });
   });
 }

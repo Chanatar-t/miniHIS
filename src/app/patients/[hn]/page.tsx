@@ -1,3 +1,4 @@
+import { CircleCheck, Printer } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, audit } from "@/lib/db";
@@ -66,7 +67,7 @@ export default async function PatientPage({ params, searchParams }: PageProps<"/
 
       {sp.registered && (
         <p className="animate-fade-up rounded-lg bg-emerald-50 px-4 py-3 text-emerald-900">
-          ✓ ลงทะเบียนสำเร็จ ได้ <b className="font-mono">{p.hn}</b> {!today && "· ขั้นต่อไป: เลือกสิทธิแล้วกด เปิด Visit วันนี้ ด้านขวา"}
+          <CircleCheck className="mr-1 inline h-4 w-4" aria-hidden />ลงทะเบียนสำเร็จ ได้ <b className="font-mono">{p.hn}</b> {!today && "· ขั้นต่อไป: เลือกสิทธิแล้วกด เปิด Visit วันนี้ ด้านขวา"}
         </p>
       )}
       {sp.existed && <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">มี Visit วันนี้อยู่แล้ว ไม่ได้เปิดซ้ำ</p>}
@@ -157,7 +158,7 @@ export default async function PatientPage({ params, searchParams }: PageProps<"/
               {currentRows.length} รายการรายงานแล้ว
             </span>
             <Link href={`/visits/${current.vn}/report`} className="btn-ghost ml-auto">
-              🖨 ใบรายงานผล Visit นี้
+              <Printer className="h-4 w-4" aria-hidden /> ใบรายงานผล Visit นี้
             </Link>
           </div>
           <ResultsTable rows={currentRows} />
