@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { flagResult, isValidCid, cidCheckDigit, groupIntoTubes, ungroundedNumbers } from "../src/lib/rules.ts";
+import { flagResult, isValidCid, cidCheckDigit, groupIntoTubes, ungroundedNumbers, orderStatus } from "../src/lib/rules.ts";
 
 const glucose = { ref_low: 70, ref_high: 100, crit_low: 40, crit_high: 500 };
 
@@ -32,6 +32,16 @@ test("ungroundedNumbers", () => {
   const src = JSON.stringify({ results: [{ test: "HBA1C", value: "7.20", ref: "4 - 6" }] });
   assert.deepEqual(ungroundedNumbers("HbA1c 7.2 สูงกว่า 6", src), []);
   assert.deepEqual(ungroundedNumbers("HbA1c 8.1 สูงกว่า 6", src), ["8.1"]);
+});
+
+test("orderStatus", () => {
+  assert.equal(orderStatus(["ORDERED", "ORDERED"]), "WAITING");
+  assert.equal(orderStatus(["COLLECTED", "ORDERED"]), "IN_PROGRESS");
+  assert.equal(orderStatus(["VERIFIED", "SENT"]), "PARTIAL");
+  assert.equal(orderStatus(["VERIFIED", "VERIFIED"]), "COMPLETE");
+  assert.equal(orderStatus(["VERIFIED", "REJECTED"]), "COMPLETE"); // rejected tube, its re-collect already verified
+  assert.equal(orderStatus(["REJECTED", "ORDERED"]), "WAITING"); // waiting for re-collection
+  assert.equal(orderStatus(["CANCELLED"]), "CANCELLED");
 });
 
 test("isValidCid", () => {

@@ -42,6 +42,20 @@ export default async function GuidePage() {
         </div>
       </section>
 
+      <Link
+        href="/guide/flow"
+        className="group flex flex-wrap items-center gap-4 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 to-white p-5 transition hover:shadow-md"
+      >
+        <span className="text-3xl" aria-hidden>
+          🔄
+        </span>
+        <div className="flex-1">
+          <div className="font-semibold">การไหลของข้อมูลและสถานะทั้งหมด</div>
+          <p className="text-sm text-slate-600">มีกี่สถานะ แต่ละสถานะหมายถึงอะไร แบ่งย่อยอย่างไร อธิบายแบบไม่ต้องมีพื้นฐานไอที พร้อมตัวเลขจริงจากระบบ</p>
+        </div>
+        <span className="font-medium text-violet-700 group-hover:translate-x-1 transition">อ่าน →</span>
+      </Link>
+
       {/* how to use this guide */}
       <section className="grid gap-4 sm:grid-cols-3">
         {[

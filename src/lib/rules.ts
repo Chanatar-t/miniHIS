@@ -33,6 +33,18 @@ export function groupIntoTubes<T extends { specimen_type: string; container: str
   return [...tubes.values()];
 }
 
+// Order status is derived from its tests, never stored (a stored copy could drift out of sync).
+// Rejected tests are ignored: a reject always re-queues a fresh ORDERED row for the same test.
+export type OrderStatus = "WAITING" | "IN_PROGRESS" | "PARTIAL" | "COMPLETE" | "CANCELLED";
+export function orderStatus(itemStatuses: string[]): OrderStatus {
+  const live = itemStatuses.filter((s) => s !== "REJECTED" && s !== "CANCELLED");
+  if (live.length === 0) return "CANCELLED";
+  if (live.every((s) => s === "VERIFIED")) return "COMPLETE";
+  if (live.some((s) => s === "VERIFIED")) return "PARTIAL";
+  if (live.every((s) => s === "ORDERED")) return "WAITING";
+  return "IN_PROGRESS";
+}
+
 // AI guardrail: numbers in the generated text that never appear in the source data (hallucinated values).
 // Compares numerically so "7.20" matches "7.2".
 export function ungroundedNumbers(output: string, source: string): string[] {

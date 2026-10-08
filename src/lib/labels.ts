@@ -16,6 +16,15 @@ export const ITEM_STATUS: Record<string, { label: string; cls: string }> = {
   CANCELLED: { label: "ยกเลิก", cls: "bg-slate-100 text-slate-400 line-through" },
 };
 
+// derived by orderStatus() in rules.ts
+export const ORDER_STATUS: Record<string, { label: string; cls: string }> = {
+  WAITING: { label: "รอเก็บสิ่งส่งตรวจ", cls: "bg-slate-100 text-slate-700" },
+  IN_PROGRESS: { label: "กำลังดำเนินการ", cls: "bg-sky-100 text-sky-800" },
+  PARTIAL: { label: "ได้ผลบางส่วน", cls: "bg-amber-100 text-amber-800" },
+  COMPLETE: { label: "รายงานผลครบ", cls: "bg-emerald-100 text-emerald-800" },
+  CANCELLED: { label: "ยกเลิกทั้งใบ", cls: "bg-slate-100 text-slate-400 line-through" },
+};
+
 export const FLAG: Record<string, { label: string; cls: string }> = {
   LL: { label: "LL วิกฤต", cls: "bg-red-600 text-white font-bold" },
   HH: { label: "HH วิกฤต", cls: "bg-red-600 text-white font-bold" },

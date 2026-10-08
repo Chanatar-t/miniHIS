@@ -259,6 +259,9 @@ async function main() {
   r = await post("/guide/lab", lab2, uatForm, { caseId: "UAT-FAKE-99", status: "PASS" }, true);
   ok(one("SELECT COUNT(*) n FROM uat_results").n === 2, "unknown case id rejected");
 
+  const flow = await get("/guide/flow");
+  ok(flow.status === 200 && (await flow.text()).includes("สถานะของทั้งใบสั่ง"), "status/flow explainer is public");
+
   console.log("# not found");
   g = await get("/patients/HN9999999", doc);
   ok(g.status === 404 && (await g.text()).includes("ไม่พบข้อมูล"), "unknown HN -> Thai 404");
