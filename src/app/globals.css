@@ -2,6 +2,17 @@
 
 @theme inline {
   --font-sans: var(--font-thai);
+  --animate-shake: shake 0.35s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake { animation: none; }
 }
 
 /* shared building blocks, kept tiny on purpose */

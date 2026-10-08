@@ -6,6 +6,7 @@ import { todayVisits } from "@/lib/visits";
 import { LiveSearch } from "@/components/client";
 import { Avatar, TodayList, fullName } from "@/components/patient";
 import { openVisit } from "./actions";
+import { RegisterModal, OpenRegisterButton } from "./register-modal";
 
 type Row = { id: number; hn: string; cid: string; prefix: string; first_name: string; last_name: string; dob: string; sex: string; phone: string | null };
 
@@ -35,7 +36,10 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
   const opened = typeof sp.opened === "string" ? today.find((v) => v.vn === sp.opened) : undefined;
   const existed = typeof sp.existed === "string" ? today.find((v) => v.vn === sp.existed) : undefined;
   // pre-fill the registration form from what was typed
-  const newHref = `/patients/new?${new URLSearchParams(/^\d{13}$/.test(q) ? { cid: q } : q ? { name: q } : {})}`;
+  // pre-fill the registration modal from what was typed: 13 digits -> CID, otherwise "first last"
+  const isCid = /^\d{13}$/.test(q);
+  const [first_name = "", ...rest] = isCid || !q ? [] : q.split(/\s+/);
+  const regInitial: Record<string, string> = isCid ? { cid: q } : { first_name, last_name: rest.join(" ") };
 
   return (
     <div className="space-y-5">
@@ -71,9 +75,9 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
               <p className="text-sm text-slate-500">พิมพ์ HN, เลขบัตรประชาชน 13 หลัก, ชื่อ หรือเบอร์โทร ผลจะขึ้นทันที</p>
             </div>
             {isClerk && (
-              <Link href={newHref} className="btn-ghost whitespace-nowrap">
+              <RegisterModal initial={regInitial} className="btn-ghost whitespace-nowrap">
                 + ผู้ป่วยใหม่
-              </Link>
+              </RegisterModal>
             )}
           </div>
           <form className="card p-3">
@@ -93,9 +97,9 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
               <div className="font-medium">ไม่พบผู้ป่วย “{q}”</div>
               <p className="text-sm text-slate-500">ตรวจตัวสะกดอีกครั้ง ถ้าเป็นผู้ป่วยใหม่ให้ลงทะเบียน</p>
               {isClerk && (
-                <Link href={newHref} className="btn mx-auto">
-                  ลงทะเบียนผู้ป่วยใหม่ {/^\d{13}$/.test(q) ? "ด้วยเลขบัตรนี้" : q ? `ชื่อ “${q}”` : ""}
-                </Link>
+                <OpenRegisterButton className="btn mx-auto">
+                  ลงทะเบียนผู้ป่วยใหม่ {isCid ? "ด้วยเลขบัตรนี้" : q ? `ชื่อ “${q}”` : ""}
+                </OpenRegisterButton>
               )}
             </div>
           )}

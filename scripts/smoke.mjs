@@ -103,7 +103,10 @@ async function main() {
   ok(rowsOf(p4).length === 1 && p4.includes("แสดง 31–31 จาก 31 คน") && rowsOf(p99).join() === rowsOf(p4).join(), "last page has the remainder; out-of-range page clamps to last");
   const qp = await html("/patients?q=%E0%B8%AA&page=2", clerk); // "ส" matches more than one page
   ok(qp.includes('href="/patients?q=%E0%B8%AA"') && qp.includes('aria-current="page"'), "paging keeps the search text");
-  ok((await html("/patients?q=HN9999999", clerk)).includes("ไม่พบผู้ป่วย") && (await html("/patients?q=1100000000024", clerk)).includes("/patients/new?cid=1100000000024"), "not found -> register link pre-filled with the typed CID");
+  const nf = await html("/patients?q=1100000000024", clerk);
+  ok((await html("/patients?q=HN9999999", clerk)).includes("ไม่พบผู้ป่วย") && nf.includes("ลงทะเบียนผู้ป่วยใหม่ ด้วยเลขบัตรนี้") && /<dialog[\s\S]*value="1100000000024"/.test(nf), "not found -> register modal pre-filled with the typed CID");
+  r = await submit("/patients?q=1100000000024", clerk, (f) => f.includes('name="first_name"'), { cid: "1100000000024", prefix: "นาง", sex: "F", first_name: "โมดอล", last_name: "ทดสอบ", dob: "1985-05-05", phone: "" });
+  ok(r.loc.includes("?registered=1") && one("SELECT COUNT(*) n FROM patients WHERE first_name = 'โมดอล'").n === 1, "register through the modal");
   ok((await html("/patients/new?cid=1100000000024", clerk)).includes('value="1100000000024"'), "registration form pre-filled");
   r = await submit("/patients?q=HN0000005", clerk, isVisitForm, { scheme: "SSS" });
   const vn5 = one("SELECT v.vn FROM visits v JOIN patients p ON p.id = v.patient_id WHERE p.hn = 'HN0000005'")?.vn;
