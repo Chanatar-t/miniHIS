@@ -11,13 +11,27 @@ function open(): DatabaseSync {
   const db = new DatabaseSync(DB_FILE);
   db.exec("PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;");
   // Schema is all IF NOT EXISTS: re-run on every start so new tables appear in an existing DB.
-  // ponytail: no column migrations; changing a column still needs `npm run db:reset`.
   // BEGIN IMMEDIATE: if several processes start at once (next build workers), only one seeds.
   tx(db, () => {
     db.exec(readFileSync(path.join(process.cwd(), "db", "schema.sql"), "utf8"));
     if (!db.prepare("SELECT 1 FROM users").get()) seed(db);
+    upgrade(db);
   });
   return db;
+}
+
+// Bring a DB created by an older version up to date: columns and seed rows added after day 1.
+// ponytail: hand-written list; switch to numbered migration files once there are more than a few.
+const ADDED_COLUMNS: [table: string, column: string, type: string][] = [
+  ["lab_order_items", "message_id", "INTEGER REFERENCES inbound_messages(id)"],
+];
+function upgrade(d: DatabaseSync) {
+  for (const [table, column, type] of ADDED_COLUMNS) {
+    const cols = d.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+  // second medtech for four-eyes demo (seeded from day 3)
+  d.prepare("INSERT INTO users(username, name, role) SELECT 'lab2', 'ทนพ.สมศักดิ์ ตรวจดี', 'LAB' WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'lab2')").run();
 }
 
 // survive Next.js dev hot reload
