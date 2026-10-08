@@ -95,7 +95,8 @@ async function main() {
 
   console.log("# front desk");
   const deskForms = forms(await html("/patients", clerk));
-  ok(deskForms.filter(isVisitForm).length >= 10, "desk lists recent patients with open-visit buttons before typing");
+  const deskRows = ((await html("/patients", clerk)).match(/class="card flex flex-wrap items-center gap-4"/g) ?? []).length;
+  ok(deskRows === 10 && deskForms.filter(isVisitForm).length >= 5, `desk lists 10 recent patients before typing (got ${deskRows})`);
   ok((await html("/patients?q=HN9999999", clerk)).includes("ไม่พบผู้ป่วย") && (await html("/patients?q=1100000000024", clerk)).includes("/patients/new?cid=1100000000024"), "not found -> register link pre-filled with the typed CID");
   ok((await html("/patients/new?cid=1100000000024", clerk)).includes('value="1100000000024"'), "registration form pre-filled");
   r = await submit("/patients?q=HN0000005", clerk, isVisitForm, { scheme: "SSS" });
@@ -128,6 +129,9 @@ async function main() {
   ok(r.status === 303 && one("SELECT COUNT(*) n FROM specimens").n === 3, "double-click collect creates no extra tubes");
   await submit("/lab/collect", lab, (f) => f.includes('name="orderId" value="2"'));
   const vitd = one("SELECT id, accession_no a FROM specimens WHERE order_id = 2");
+
+  const emptyRes = await html("/lab/results", lab);
+  ok(emptyRes.includes("ไม่มีผลที่รอคีย์") && emptyRes.includes('href="/lab/receive"') && emptyRes.includes("ยังไม่ได้สแกนรับเข้า"), "empty results page explains why and links to the blocking step");
 
   console.log("# reject & receive");
   const recvPage = await html("/lab/receive", lab);
@@ -190,7 +194,10 @@ async function main() {
   const lab2 = ck(5);
   const decode = (s) => s.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", '"').replaceAll("&#x27;", "'").replaceAll("&amp;", "&");
   let resPage = await html("/lab/results", lab);
-  ok([1, 2, 3, 4].every((i) => resPage.includes(`name="value_${i}"`)), "worklist: 3 outlab SENT + in-house CREA");
+  const outPage = await html("/lab/results?tab=out", lab);
+  ok(resPage.includes(`name="value_4"`) && !resPage.includes(`name="value_1"`) && [1, 2, 3].every((i) => outPage.includes(`name="value_${i}"`)), "results split: in-house CREA tab, 3 outlab SENT on the outlab tab");
+  ok(resPage.includes("ลงผล / รับผล") && /aria-current="step"/.test(resPage), "lab pipeline bar marks the current step");
+  ok(resPage.includes("กำหนดได้ผล") && !resPage.includes("เกินกำหนด"), "same-day in-house test is not flagged overdue right after collection");
   const creaForm = forms(resPage).find((f) => f.includes('name="value_4"'));
   r = await post("/lab/results", lab, creaForm, { value_4: "12" });
   const crea = one("SELECT status, flag, resulted_by FROM lab_order_items WHERE id = 4");
@@ -201,9 +208,9 @@ async function main() {
   ok(r.loc.includes("err=") && one("SELECT value FROM lab_order_items WHERE id = 4").value === "12", "re-submit stale result form -> error, value kept");
 
   const textarea = (h) => decode(h.match(/<textarea[^>]*>([\s\S]*?)<\/textarea>/)?.[1] ?? "");
-  const oru = textarea(await html("/lab/results?sample=OUT-A", lab));
+  const oru = textarea(await html("/lab/results?tab=out&sample=OUT-A", lab));
   ok(oru.startsWith("MSH|^~\\&|OUT-A") && (oru.match(/OBX/g) || []).length === 3, "sample ORU generated for 3 sent tests");
-  const importForm = forms(resPage).find((f) => f.includes('name="raw"'));
+  const importForm = forms(outPage).find((f) => f.includes('name="raw"'));
   r = await post("/lab/results", lab, importForm, { raw: oru });
   ok(r.loc.includes("msg=") && r.loc.includes("3 ผล"), "import HL7: " + r.loc.split("msg=")[1]);
   const tsh = one("SELECT status, flag, resulted_by, message_id FROM lab_order_items WHERE id = 1");

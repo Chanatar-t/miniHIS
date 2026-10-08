@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { ITEM_STATUS, ORDER_STATUS, FLAG, REJECT_REASONS } from "@/lib/labels";
+import { ITEM_STATUS, ORDER_STATUS, FLAG, REJECT_REASONS, DUE_OFFSET } from "@/lib/labels";
 import { orderStatus } from "@/lib/rules";
 
 export const metadata: Metadata = { title: "การไหลของข้อมูลและสถานะ · Mini HIS" };
@@ -140,7 +140,7 @@ export default async function FlowPage() {
   const rows = db
     .prepare(
       `SELECT i.order_id, i.status, o.priority, t.outlab_id IS NOT NULL AS outlab, sh.status AS shipment_status,
-              coalesce(datetime(s.collected_at, '+' || t.tat_days || ' days') < datetime('now','localtime'), 0) AS overdue,
+              coalesce(datetime(s.collected_at, ${DUE_OFFSET}) < datetime('now','localtime'), 0) AS overdue,
               i.flag, EXISTS (SELECT 1 FROM result_amendments a WHERE a.item_id = i.id) AS amended, i.message_id IS NOT NULL AS from_hl7
        FROM lab_order_items i JOIN lab_orders o ON o.id = i.order_id JOIN lab_tests t ON t.id = i.test_id
        LEFT JOIN specimens s ON s.id = i.specimen_id LEFT JOIN shipments sh ON sh.id = s.shipment_id`,

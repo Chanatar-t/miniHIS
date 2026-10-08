@@ -1,3 +1,4 @@
+import { LabSteps } from "../steps";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { REJECT_REASONS } from "@/lib/labels";
@@ -29,6 +30,7 @@ export default async function ReceivePage({ searchParams }: PageProps<"/lab/rece
 
   return (
     <div className="space-y-4">
+      <LabSteps current="receive" />
       <h1 className="text-xl font-semibold">รับสิ่งส่งตรวจเข้า Lab</h1>
       <form action={receiveSpecimen} className="card flex gap-2">
         <input name="accession" autoFocus autoComplete="off" className="input font-mono text-lg" placeholder="สแกนบาร์โค้ด หรือพิมพ์ Accession แล้วกด Enter" />

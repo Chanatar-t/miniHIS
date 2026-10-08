@@ -1,3 +1,4 @@
+import { LabSteps } from "../../steps";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -28,6 +29,7 @@ export default async function LabelsPage({ params }: PageProps<"/lab/labels/[ord
 
   return (
     <div className="space-y-4">
+      <LabSteps current="collect" />
       <div className="no-print flex items-center gap-3">
         <h1 className="text-xl font-semibold">ฉลากหลอดเลือด · Order #{orderId}</h1>
         <PrintButton label="พิมพ์ฉลาก" />

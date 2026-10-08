@@ -67,3 +67,6 @@ export function age(dob: string, at = new Date()) {
   if (at < new Date(at.getFullYear(), d.getMonth(), d.getDate())) y--;
   return y;
 }
+
+// SQL modifier for when a result is due: tat_days = 0 means "same day" in the catalog -> 2 hours, not "already late".
+export const DUE_OFFSET = "CASE WHEN t.tat_days = 0 THEN '+2 hours' ELSE '+' || t.tat_days || ' days' END";

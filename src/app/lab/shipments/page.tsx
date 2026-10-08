@@ -1,3 +1,4 @@
+import { LabSteps } from "../steps";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -31,6 +32,7 @@ export default async function ShipmentsPage({ searchParams }: PageProps<"/lab/sh
 
   return (
     <div className="space-y-4">
+      <LabSteps current="ship" />
       <h1 className="text-xl font-semibold">ส่งตรวจ Outlab</h1>
       <Flash sp={await searchParams} />
       <div className="grid gap-4 md:grid-cols-2">

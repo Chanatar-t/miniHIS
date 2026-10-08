@@ -1,3 +1,4 @@
+import { LabSteps } from "../steps";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -25,6 +26,7 @@ export default async function CollectPage() {
 
   return (
     <div className="space-y-4">
+      <LabSteps current="collect" />
       <h1 className="text-xl font-semibold">รอเก็บสิ่งส่งตรวจ ({orders.size})</h1>
       {orders.size === 0 && <p className="text-sm text-slate-500">ไม่มีงานค้าง</p>}
       {[...orders.values()].map((items) => {

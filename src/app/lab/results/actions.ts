@@ -35,14 +35,14 @@ export async function saveResults(formData: FormData) {
         save.run(e.value, flagResult(e.value, it), user.id, e.itemId);
         audit(db, user.id, "RESULT", "lab_order_item", e.itemId, `${it.code}=${e.value}`);
       }
-      return `บันทึกผล ${entries.length} รายการ รอ Verify`;
+      return `✓ บันทึกผล ${entries.length} รายการแล้ว · ขั้นต่อไป: ให้เจ้าหน้าที่อีกคนกด Verify (เมนูขั้นที่ 5)`;
     });
   });
 }
 
 // HL7 ORU^R01 from an outlab. Idempotent on MSH-10; we re-flag with OUR reference ranges.
 export async function importHl7(formData: FormData) {
-  await withFlash("/lab/results", async () => {
+  await withFlash("/lab/results?tab=out", async () => {
     const user = await requireRole("LAB");
     const file = formData.get("file");
     const raw = file instanceof File && file.size > 0 ? await file.text() : String(formData.get("raw") ?? "");
@@ -93,7 +93,7 @@ export async function importHl7(formData: FormData) {
         db.prepare("UPDATE inbound_messages SET status = 'ERROR', error = ? WHERE id = ?").run(problems.join("\n"), msgId);
       }
       audit(db, user.id, "IMPORT_HL7", "inbound_message", msgId, `${msg.controlId}: ${applied} ok, ${problems.length} unmatched`);
-      return `นำเข้า ${msg.controlId}: ${applied} ผล` + (problems.length ? ` · ไม่ตรง ${problems.length} รายการ (${problems.join("; ")}) ให้ลงผลเอง` : "");
+      return `✓ นำเข้า ${msg.controlId}: ${applied} ผล · ขั้นต่อไป: Verify` + (problems.length ? ` · ไม่ตรง ${problems.length} รายการ (${problems.join("; ")}) ให้ลงผลเอง` : "");
     });
   });
 }
@@ -123,7 +123,7 @@ export async function verifyOrder(formData: FormData) {
       for (const it of items) verify.run(user.id, it.id);
       for (const it of critical) notify.run(it.id, notifiedTo, method, user.id);
       audit(db, user.id, "VERIFY", "lab_order_item", null, `items=${itemIds.join(",")}${critical.length ? ` critical->${notifiedTo}` : ""}`);
-      return `Verify ${items.length} รายการ` + (critical.length ? ` · บันทึกการแจ้งค่าวิกฤต ${critical.length} รายการ` : "");
+      return `✓ Verify ${items.length} รายการแล้ว แพทย์เห็นผลแล้ว` + (critical.length ? ` · บันทึกการแจ้งค่าวิกฤต ${critical.length} รายการ` : "");
     });
   });
 }

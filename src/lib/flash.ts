@@ -9,7 +9,7 @@ export function fail(msg: string): never {
 }
 
 export const back = (path: string, msg: string, ok = true): never =>
-  redirect(`${path}?${new URLSearchParams({ [ok ? "msg" : "err"]: msg })}`);
+  redirect(`${path}${path.includes("?") ? "&" : "?"}${new URLSearchParams({ [ok ? "msg" : "err"]: msg })}`);
 
 // Run an action body; UserError -> ?err= on `path`, returned string -> ?msg=. Anything else still throws (real bug).
 export async function withFlash(path: string, fn: () => Promise<string | void>) {

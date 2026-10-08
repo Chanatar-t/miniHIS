@@ -55,7 +55,12 @@ export async function receiveSpecimen(formData: FormData) {
       db.prepare(`UPDATE specimens SET received_by = ?, received_at = ${now} WHERE id = ?`).run(user.id, s.id);
       db.prepare("UPDATE lab_order_items SET status = 'RECEIVED' WHERE specimen_id = ? AND status = 'COLLECTED'").run(s.id);
       audit(db, user.id, "RECEIVE", "specimen", s.id, acc);
-      return `รับ ${acc} เข้า Lab แล้ว`;
+      const outlab = db
+        .prepare(
+          "SELECT max(ol.code) AS o FROM lab_order_items i JOIN lab_tests t ON t.id = i.test_id LEFT JOIN outlabs ol ON ol.id = t.outlab_id WHERE i.specimen_id = ?",
+        )
+        .get(s.id) as { o: string | null };
+      return `✓ รับ ${acc} เข้า Lab แล้ว · ขั้นต่อไป: ${outlab.o ? `ส่ง Outlab (${outlab.o})` : "ลงผล (ตรวจในโรงพยาบาล)"}`;
     });
   });
 }

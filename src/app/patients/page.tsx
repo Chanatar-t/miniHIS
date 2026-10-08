@@ -23,7 +23,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
       `SELECT p.id, p.hn, p.cid, p.prefix, p.first_name, p.last_name, p.dob, p.sex, p.phone FROM patients p
        WHERE ? = '' OR p.hn = ? OR p.cid = ? OR p.first_name || ' ' || p.last_name LIKE ? OR p.phone = ?
        ORDER BY coalesce((SELECT max(v.id) FROM visits v WHERE v.patient_id = p.id), 0) DESC, p.id DESC
-       LIMIT 20`,
+       LIMIT 10`,
     )
     .all(q, q.toUpperCase(), q, `%${q}%`, q) as Row[];
   const today = todayVisits();
@@ -78,7 +78,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
           </form>
 
           <p className="px-1 text-sm text-slate-500">
-            {q ? `ผลการค้นหา “${q}” ${rows.length} คน` : "ผู้ป่วยล่าสุด 20 คน (มาล่าสุดอยู่บน) พิมพ์ด้านบนเพื่อค้นหาคนอื่น"}
+            {q ? `ผลการค้นหา “${q}” ${rows.length} คน` : "ผู้ป่วยล่าสุด 10 คน (มาล่าสุดอยู่บน) พิมพ์ด้านบนเพื่อค้นหาคนอื่น"}
           </p>
 
           {q && rows.length === 0 && (

@@ -1,3 +1,4 @@
+import { LabSteps } from "../steps";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
@@ -36,6 +37,7 @@ export default async function VerifyPage({ searchParams }: PageProps<"/lab/verif
 
   return (
     <div className="space-y-4">
+      <LabSteps current="verify" />
       <h1 className="text-xl font-semibold">รอ Verify ({rows.length} รายการ)</h1>
       <Flash sp={await searchParams} />
       {orders.length === 0 && <p className="text-sm text-slate-500">ไม่มีผลรอ verify</p>}
