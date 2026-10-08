@@ -25,7 +25,7 @@ export function AiSummaryCard({ patientId }: { patientId: number }) {
       </form>
 
       {s && (
-        <div className="space-y-2" aria-live="polite">
+        <div className="animate-fade-up space-y-2" aria-live="polite">
           <div className="flex items-center gap-2">
             <span className={`rounded px-2 py-0.5 text-xs ${s.source === "ai" ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-700"}`}>
               {s.source === "ai" ? "AI-generated" : "สรุปแบบกฎ"}
@@ -33,7 +33,7 @@ export function AiSummaryCard({ patientId }: { patientId: number }) {
             <p className="font-medium">{s.headline}</p>
           </div>
           {s.warning && <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">⚠ {s.warning}</p>}
-          <ul className="grid gap-2 sm:grid-cols-2">
+          <ul className="stagger grid gap-2 sm:grid-cols-2">
             {s.findings.map((f, i) => (
               <li key={i} className={`rounded-md border-l-4 px-3 py-2 text-sm ${SEV[f.severity]}`}>
                 <span className="font-mono font-semibold">{f.test}</span> {f.note}

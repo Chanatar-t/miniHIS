@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -40,7 +41,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="th" className={`${font.variable} h-full antialiased`}>
       <body className="min-h-full bg-slate-50 text-slate-900">
         {user && (
-          <header className="no-print border-b border-slate-200 bg-white">
+          <header className="no-print border-b border-slate-200 bg-white" style={{ viewTransitionName: "site-header" }}>
             <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-2">
               <Link href="/" className="font-semibold text-teal-700">
                 Mini HIS
@@ -61,7 +62,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </div>
           </header>
         )}
-        <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+        {/* page transition on navigation; live search (type "search") updates in place without it */}
+        <ViewTransition default={{ search: "none", default: "page" }}>
+          <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+        </ViewTransition>
       </body>
     </html>
   );

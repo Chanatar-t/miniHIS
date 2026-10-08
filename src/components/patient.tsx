@@ -42,11 +42,11 @@ export function TodayList({ visits, highlight, action }: { visits: TodayVisit[];
       </div>
     );
   return (
-    <ul className="space-y-2">
+    <ul className="stagger space-y-2">
       {visits.map((v) => (
         <li
           key={v.id}
-          className={`flex items-center gap-3 rounded-lg border bg-white p-3 ${v.vn === highlight ? "border-emerald-400 ring-2 ring-emerald-200" : "border-slate-200"}`}
+          className={`flex items-center gap-3 rounded-lg border bg-white p-3 transition-shadow duration-200 hover:shadow-sm ${v.vn === highlight ? "border-emerald-400 ring-2 ring-emerald-200" : "border-slate-200"}`}
         >
           <div className="w-12 text-center">
             <div className="text-[10px] text-slate-400">คิว</div>

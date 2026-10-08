@@ -61,7 +61,7 @@ export default async function PatientPage({ params, searchParams }: PageProps<"/
       <BackLink href="/patients">รายชื่อผู้ป่วย</BackLink>
 
       {sp.registered && (
-        <p className="rounded-lg bg-emerald-50 px-4 py-3 text-emerald-900">
+        <p className="animate-fade-up rounded-lg bg-emerald-50 px-4 py-3 text-emerald-900">
           ✓ ลงทะเบียนสำเร็จ ได้ <b className="font-mono">{p.hn}</b> {!today && "· ขั้นต่อไป: เลือกสิทธิแล้วกด เปิด Visit วันนี้ ด้านขวา"}
         </p>
       )}
@@ -145,7 +145,7 @@ export default async function PatientPage({ params, searchParams }: PageProps<"/
 
       {user.role === "DOCTOR" && <AiSummaryCard patientId={p.id} />}
 
-      <section className="space-y-3">
+      <section className="stagger space-y-3">
         <h2 className="text-lg font-semibold">ประวัติการมารับบริการ</h2>
         {visits.length === 0 && <p className="text-sm text-slate-500">ยังไม่เคยมารับบริการ</p>}
         {visits.map((v) => {

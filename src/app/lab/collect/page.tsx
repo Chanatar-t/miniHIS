@@ -29,36 +29,38 @@ export default async function CollectPage() {
       <LabSteps current="collect" />
       <h1 className="text-xl font-semibold">รอเก็บสิ่งส่งตรวจ ({orders.size})</h1>
       {orders.size === 0 && <p className="text-sm text-slate-500">ไม่มีงานค้าง</p>}
-      {[...orders.values()].map((items) => {
-        const o = items[0];
-        return (
-          <div key={o.order_id} className={`card flex flex-wrap items-center gap-4 ${o.priority === "STAT" ? "border-red-300" : ""}`}>
-            <div className="w-28">
-              {o.priority === "STAT" && <div className="text-xs font-bold text-red-600">STAT</div>}
-              <div className="font-mono text-xs text-slate-500">#{o.order_id}</div>
-              <div className="text-xs text-slate-500">{o.ordered_at.slice(11, 16)}</div>
+      <div className="stagger space-y-4">
+        {[...orders.values()].map((items) => {
+          const o = items[0];
+          return (
+            <div key={o.order_id} className={`card flex flex-wrap items-center gap-4 ${o.priority === "STAT" ? "border-red-300" : ""}`}>
+              <div className="w-28">
+                {o.priority === "STAT" && <div className="text-xs font-bold text-red-600">STAT</div>}
+                <div className="font-mono text-xs text-slate-500">#{o.order_id}</div>
+                <div className="text-xs text-slate-500">{o.ordered_at.slice(11, 16)}</div>
+              </div>
+              <div className="min-w-48">
+                <Link href={`/patients/${o.hn}`} className="font-mono text-teal-700 hover:underline">
+                  {o.hn}
+                </Link>
+                <div>{o.patient}</div>
+              </div>
+              <div className="flex flex-1 flex-wrap gap-1">
+                {items.map((i) => (
+                  <span key={i.code} className="rounded bg-slate-100 px-2 py-0.5 text-xs" title={i.container}>
+                    {i.code} <span className="text-slate-400">{i.outlab ?? "IN"}</span>
+                  </span>
+                ))}
+                {o.note && <div className="w-full text-xs text-amber-700">หมายเหตุ: {o.note}</div>}
+              </div>
+              <form action={collectOrder}>
+                <input type="hidden" name="orderId" value={o.order_id} />
+                <button className="btn">เก็บแล้ว + พิมพ์ฉลาก</button>
+              </form>
             </div>
-            <div className="min-w-48">
-              <Link href={`/patients/${o.hn}`} className="font-mono text-teal-700 hover:underline">
-                {o.hn}
-              </Link>
-              <div>{o.patient}</div>
-            </div>
-            <div className="flex flex-1 flex-wrap gap-1">
-              {items.map((i) => (
-                <span key={i.code} className="rounded bg-slate-100 px-2 py-0.5 text-xs" title={i.container}>
-                  {i.code} <span className="text-slate-400">{i.outlab ?? "IN"}</span>
-                </span>
-              ))}
-              {o.note && <div className="w-full text-xs text-amber-700">หมายเหตุ: {o.note}</div>}
-            </div>
-            <form action={collectOrder}>
-              <input type="hidden" name="orderId" value={o.order_id} />
-              <button className="btn">เก็บแล้ว + พิมพ์ฉลาก</button>
-            </form>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

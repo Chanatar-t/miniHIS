@@ -22,7 +22,7 @@ export function LiveSearch({ defaultValue, placeholder }: { defaultValue: string
       onChange={(e) => {
         const q = e.target.value;
         clearTimeout(timer.current);
-        timer.current = setTimeout(() => router.replace(q ? `?q=${encodeURIComponent(q)}` : "?", { scroll: false }), 250);
+        timer.current = setTimeout(() => router.replace(q ? `?q=${encodeURIComponent(q)}` : "?", { scroll: false, transitionTypes: ["search"] }), 250);
       }}
     />
   );
@@ -36,7 +36,7 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`rounded-md px-2.5 py-1.5 ${active ? "bg-teal-50 font-medium text-teal-800" : "text-slate-600 hover:bg-slate-50 hover:text-teal-700"}`}
+      className={`rounded-md px-2.5 py-1.5 ${active ? "bg-teal-50 font-medium text-teal-800" : "text-slate-600 hover:bg-slate-50 hover:text-teal-700"} transition-colors duration-150`}
     >
       {children}
     </Link>

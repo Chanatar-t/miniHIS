@@ -111,12 +111,12 @@ export function RegisterModal({ initial, children, className }: { initial: Recor
           </div>
 
           {warn && !confirming && (
-            <p role="status" className="mx-5 mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <p role="status" className="animate-fade-up mx-5 mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
               มีข้อมูลที่กรอกไว้ หน้าต่างจึงไม่ปิดเอง ถ้าต้องการปิดให้กด ยกเลิก
             </p>
           )}
           {confirming && (
-            <div role="alertdialog" aria-label="ยืนยันการทิ้งข้อมูล" className="mx-5 mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+            <div role="alertdialog" aria-label="ยืนยันการทิ้งข้อมูล" className="animate-fade-up mx-5 mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
               <span className="flex-1">ทิ้งข้อมูลที่กรอกไว้?</span>
               <button type="button" onClick={() => setConfirming(false)} autoFocus className="btn-ghost">
                 กลับไปกรอกต่อ

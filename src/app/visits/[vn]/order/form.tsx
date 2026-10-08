@@ -48,7 +48,7 @@ export function OrderForm({ visitId, catalog, recentIds }: { visitId: number; ca
             placeholder="เช่น tsh, vitamin, 4548-4"
           />
           {matches.length > 0 && (
-            <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow">
+            <ul className="animate-fade-up absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
               {matches.map((t, i) => (
                 <li key={t.id}>
                   <button
@@ -91,7 +91,7 @@ export function OrderForm({ visitId, catalog, recentIds }: { visitId: number; ca
               <th />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="stagger">
             {picked.map((t) => (
               <tr key={t.id}>
                 <td>

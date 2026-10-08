@@ -84,7 +84,7 @@ export default async function RoleGuidePage({ params, searchParams }: PageProps<
 
         <div className="min-w-0 space-y-10">
           {/* tasks */}
-          <section className="space-y-5">
+          <section className="stagger space-y-5">
             <h2 className="text-xl font-semibold">งานหลัก</h2>
             {g.tasks.map((task, i) => (
               <article key={task.title} id={`task-${i + 1}`} className="card scroll-mt-6 space-y-4">

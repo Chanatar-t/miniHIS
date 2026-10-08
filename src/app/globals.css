@@ -3,34 +3,145 @@
 @theme inline {
   --font-sans: var(--font-thai);
   --animate-shake: shake 0.35s ease-in-out;
+  --animate-fade-up: fade-up 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-pop: pop 0.22s cubic-bezier(0.3, 1.4, 0.5, 1) both;
 }
+
+/* ---------- motion: short, ease-out, opacity + small movement only ---------- */
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-8px); }
   75% { transform: translateX(8px); }
 }
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes page-out {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(10px); }
+}
+
+html {
+  scroll-behavior: smooth;
+  interpolate-size: allow-keywords; /* lets <details> animate to height:auto (Chromium; others just snap) */
+}
+
+/* Lists: rows arrive one after another. Only the first 12 are delayed; the rest come with the 12th. */
+.stagger > * {
+  animation: var(--animate-fade-up);
+}
+.stagger > :nth-child(2) { animation-delay: 30ms; }
+.stagger > :nth-child(3) { animation-delay: 60ms; }
+.stagger > :nth-child(4) { animation-delay: 90ms; }
+.stagger > :nth-child(5) { animation-delay: 120ms; }
+.stagger > :nth-child(6) { animation-delay: 150ms; }
+.stagger > :nth-child(7) { animation-delay: 180ms; }
+.stagger > :nth-child(8) { animation-delay: 210ms; }
+.stagger > :nth-child(9) { animation-delay: 240ms; }
+.stagger > :nth-child(10) { animation-delay: 270ms; }
+.stagger > :nth-child(11) { animation-delay: 300ms; }
+.stagger > :nth-child(n + 12) { animation-delay: 330ms; }
+
+/* Modal: backdrop fades, panel rises */
+:where(dialog[open]) > * {
+  animation: dialog-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+dialog[open]::backdrop {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* <details>: smooth open/close */
+details::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size 0.25s ease,
+    content-visibility 0.25s allow-discrete;
+}
+details[open]::details-content {
+  block-size: auto;
+}
+
+/* Page navigation (React <ViewTransition default="page"> in the root layout): old content fades up and out, new rises in.
+   The header has its own name so it stays perfectly still. */
+::view-transition-old(.page) {
+  animation: page-out 0.12s ease-in both;
+}
+::view-transition-new(.page) {
+  animation: page-in 0.26s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s both; /* starts as the old page is gone: no overlapping text */
+}
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+/* No whole-page crossfade: only the named .page group animates. Without this, transitions typed "search"
+   (live search, class none) would still fade the entire page on every keystroke. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+/* clicks during a transition reach the live page */
+::view-transition {
+  pointer-events: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-shake { animation: none; }
+  *,
+  *::before,
+  *::after,
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 /* shared building blocks, kept tiny on purpose */
 @layer components {
   .btn {
-    @apply inline-flex items-center gap-1 rounded-md bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-50;
+    @apply inline-flex items-center gap-1 rounded-md bg-teal-700 px-3 py-1.5 text-sm font-medium text-white transition duration-150 hover:bg-teal-800 hover:shadow-sm active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-ghost {
-    @apply inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50;
+    @apply inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm transition duration-150 hover:border-slate-400 hover:bg-slate-50 active:scale-[0.97];
   }
   .input {
-    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20;
+    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm transition-[border-color,box-shadow,background-color] duration-150 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20;
   }
   .label {
     @apply mb-1 block text-xs font-medium text-slate-600;
   }
   .card {
-    @apply rounded-lg border border-slate-200 bg-white p-4;
+    @apply rounded-lg border border-slate-200 bg-white p-4 transition-[box-shadow,border-color,transform] duration-200;
+  }
+  /* cards that are clickable / actionable rows */
+  .card-hover {
+    @apply hover:-translate-y-px hover:border-slate-300 hover:shadow-md;
   }
   .table {
     @apply w-full text-left text-sm;
@@ -40,6 +151,9 @@
   }
   .table td {
     @apply border-b border-slate-100 px-3 py-2;
+  }
+  .table tbody tr {
+    @apply transition-colors duration-150 hover:bg-slate-50;
   }
 }
 

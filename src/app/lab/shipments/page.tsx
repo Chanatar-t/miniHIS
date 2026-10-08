@@ -35,7 +35,7 @@ export default async function ShipmentsPage({ searchParams }: PageProps<"/lab/sh
       <LabSteps current="ship" />
       <h1 className="text-xl font-semibold">ส่งตรวจ Outlab</h1>
       <Flash sp={await searchParams} />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="stagger grid gap-4 md:grid-cols-2">
         {pending.map((p) => (
           <div key={p.id} className="card flex items-center gap-4">
             <div className="flex-1">
@@ -69,7 +69,7 @@ export default async function ShipmentsPage({ searchParams }: PageProps<"/lab/sh
               <th>ส่ง</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="stagger">
             {shipments.map((s) => (
               <tr key={s.shipment_no}>
                 <td>

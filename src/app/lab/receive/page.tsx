@@ -61,7 +61,7 @@ function Section({ title, rows }: { title: string; rows: S[] }) {
             <th />
           </tr>
         </thead>
-        <tbody>
+        <tbody className="stagger">
           {rows.map((s) => (
             <tr key={s.id}>
               <td className="font-mono">

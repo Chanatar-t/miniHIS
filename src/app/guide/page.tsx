@@ -77,7 +77,7 @@ export default async function GuidePage() {
       <section>
         <h2 className="text-xl font-semibold">ภาพรวม: หลอดเลือดหนึ่งหลอดเดินทางอย่างไร</h2>
         <p className="mt-1 text-sm text-slate-600">ทุกบทบาททำงานต่อกันเป็นสายเดียว สีบอกว่าใครรับผิดชอบขั้นนั้น</p>
-        <ol className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+        <ol className="stagger mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           {FLOW.map((f, i) => {
             const g = GUIDES.find((x) => x.slug === f.by)!;
             return (
@@ -99,11 +99,11 @@ export default async function GuidePage() {
       {/* roles */}
       <section id="roles" className="scroll-mt-6">
         <h2 className="text-xl font-semibold">คู่มือตามบทบาท</h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="stagger mt-4 grid gap-4 md:grid-cols-2">
           {GUIDES.map((g) => {
             const t = TONE[g.tone];
             return (
-              <article key={g.slug} className="card flex flex-col gap-4 transition hover:shadow-md">
+              <article key={g.slug} className="card card-hover flex flex-col gap-4">
                 <div className="flex items-start gap-4">
                   <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl ${t.soft} border`} aria-hidden>
                     {g.icon}

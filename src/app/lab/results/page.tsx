@@ -136,7 +136,7 @@ export default async function ResultsPage({ searchParams }: PageProps<"/lab/resu
 
 function Tubes({ rows }: { rows: Row[] }) {
   return (
-    <div className="space-y-3">
+    <div className="stagger space-y-3">
       {[...Map.groupBy(rows, (r) => r.accession_no).values()].map((items) => {
         const s = items[0];
         return (
@@ -179,7 +179,7 @@ type Hint = { text: string; href: string; cta: string } | false;
 function Empty({ title, hints }: { title: string; hints: Hint[] }) {
   const h = hints.filter(Boolean) as Exclude<Hint, false>[];
   return (
-    <div className="card space-y-3 py-8 text-center">
+    <div className="card animate-fade-up space-y-3 py-8 text-center">
       <div className="text-4xl" aria-hidden>
         ✅
       </div>

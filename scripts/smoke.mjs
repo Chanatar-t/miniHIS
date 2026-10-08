@@ -95,7 +95,7 @@ async function main() {
 
   console.log("# front desk");
   const deskForms = forms(await html("/patients", clerk));
-  const deskRows = ((await html("/patients", clerk)).match(/class="card flex flex-wrap items-center gap-4"/g) ?? []).length;
+  const deskRows = ((await html("/patients", clerk)).match(/class="card flex flex-wrap items-center gap-4[^"]*"/g) ?? []).length;
   ok(deskRows === 10 && deskForms.filter(isVisitForm).length >= 5, `desk lists 10 recent patients before typing (got ${deskRows})`);
   const rowsOf = (h) => [...h.matchAll(/class="text-lg[^"]*" href="\/patients\/(HN\d{7})"/g)].map((m) => m[1]);
   const [p1, p2, p4, p99] = await Promise.all(["", "?page=2", "?page=4", "?page=99"].map((s) => html(`/patients${s}`, clerk)));

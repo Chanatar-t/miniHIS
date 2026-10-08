@@ -44,8 +44,8 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
   return (
     <div className="space-y-5">
       {opened && (
-        <div className="flex flex-wrap items-center gap-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-5">
-          <div className="flex h-20 w-20 flex-col items-center justify-center rounded-2xl bg-emerald-600 text-white">
+        <div className="animate-fade-up flex flex-wrap items-center gap-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-5">
+          <div className="animate-pop flex h-20 w-20 flex-col items-center justify-center rounded-2xl bg-emerald-600 text-white" style={{ animationDelay: "120ms" }}>
             <span className="text-xs">คิวที่</span>
             <span className="text-3xl font-bold leading-none">{queueNo(opened.vn)}</span>
           </div>
@@ -61,7 +61,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
         </div>
       )}
       {existed && (
-        <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="animate-fade-up rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {fullName(existed)} มี Visit วันนี้อยู่แล้ว (คิว {queueNo(existed.vn)} · {existed.vn}) ไม่ได้เปิดซ้ำ
         </p>
       )}
@@ -90,7 +90,7 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
           </p>
 
           {q && rows.length === 0 && (
-            <div className="card space-y-3 text-center">
+            <div className="card animate-fade-up space-y-3 text-center">
               <div className="text-4xl" aria-hidden>
                 🔍
               </div>
@@ -104,11 +104,11 @@ export default async function PatientsPage({ searchParams }: PageProps<"/patient
             </div>
           )}
 
-          <ul className="space-y-3">
+          <ul className="stagger space-y-3">
             {rows.map((p) => {
               const v = visitToday.get(p.id);
               return (
-                <li key={p.id} className="card flex flex-wrap items-center gap-4">
+                <li key={p.id} className="card flex flex-wrap items-center gap-4 card-hover">
                   <Avatar name={p.first_name} sex={p.sex} />
                   <div className="min-w-48 flex-1">
                     <Link href={`/patients/${p.hn}`} className="text-lg font-semibold hover:text-teal-700">
