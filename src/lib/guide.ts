@@ -17,6 +17,7 @@ export type UatCase = {
   id: string;
   title: string;
   pre?: string;
+  setup?: string[]; // how to reach `pre` when it needs another role's work
   steps: string[];
   expect: string;
   priority: "สูง" | "กลาง";
@@ -183,7 +184,7 @@ export const GUIDES: RoleGuide[] = [
       {
         id: "UAT-DOC-03",
         title: "เตือนสั่งซ้ำ",
-        pre: "ผู้ป่วยมี TSH ที่สั่งไปแล้วใน 7 วัน",
+        pre: "ผู้ป่วยมี TSH ที่สั่งไปแล้วใน 7 วัน (ทำ UAT-DOC-01 กับผู้ป่วยคนเดียวกันก่อน)",
         steps: ["สั่ง TSH อีกครั้ง"],
         expect: "ขึ้น ⚠ ใต้ชื่อ test แต่ยังสั่งได้",
         priority: "กลาง",
@@ -199,6 +200,13 @@ export const GUIDES: RoleGuide[] = [
         id: "UAT-DOC-05",
         title: "ไม่เห็นผลที่ยังไม่ verify",
         pre: "Lab ลงผลแล้วแต่ยังไม่ verify",
+        setup: [
+          "**นพ.ธนา**: สั่ง Lab พิมพ์ `crea` + Enter แล้ว **ยืนยันสั่ง Lab** (CREA ตรวจในโรงพยาบาล ไม่ต้องส่ง Outlab)",
+          "ออกจากระบบ เข้าเป็น **นางสาวพิมพ์**: **เก็บสิ่งส่งตรวจ** → **เก็บแล้ว + พิมพ์ฉลาก** จดเลข Accession",
+          "**รับเข้า Lab** พิมพ์เลข Accession แล้ว Enter",
+          "**ลงผล** ช่อง CREA ใส่ `1.0` → **บันทึกผล** (ห้ามกด Verify)",
+          "ออกจากระบบ กลับเข้าเป็น **นพ.ธนา**",
+        ],
         steps: ["เปิดหน้าผู้ป่วย"],
         expect: "เห็นสถานะ รอ Verify ไม่เห็นตัวเลขผล",
         priority: "สูง",
@@ -207,6 +215,11 @@ export const GUIDES: RoleGuide[] = [
         id: "UAT-DOC-06",
         title: "ใบรายงานผลค่าวิกฤต",
         pre: "มีผล CREA 12 ที่ verify แล้ว",
+        setup: [
+          "ทำวิธีเตรียมข้อมูลของ UAT-DOC-05 แต่ตอนลงผลใส่ CREA = `12`",
+          "ออกจากระบบ เข้าเป็น **ทนพ.สมศักดิ์** (คนที่สอง): **Verify** กรอก **แจ้งค่าวิกฤตแก่** = `นพ.ธนา` ช่องทาง โทรศัพท์ → **Verify และรายงานผล**",
+          "ออกจากระบบ กลับเข้าเป็น **นพ.ธนา**",
+        ],
         steps: ["คลิก #order เปิดใบรายงานผล"],
         expect: "CREA แถบแดง ป้าย HH วิกฤต และมีบันทึกการแจ้งค่าวิกฤต (แจ้งใคร ทางไหน โดยใคร เมื่อไร)",
         priority: "สูง",
@@ -215,6 +228,7 @@ export const GUIDES: RoleGuide[] = [
         id: "UAT-DOC-07",
         title: "AI สรุปผล",
         pre: "ผู้ป่วยมีผลที่ verify แล้วอย่างน้อย 1 รายการ",
+        setup: ["ใช้ผู้ป่วยจาก UAT-DOC-06 ได้เลย หรือทำวิธีเตรียมข้อมูลของ UAT-DOC-05 แล้วให้ **ทนพ.สมศักดิ์** กด Verify"],
         steps: ["กด ✨ สรุปด้วย AI"],
         expect: "การ์ดสรุปพร้อมป้าย AI-generated หรือ สรุปแบบกฎ และข้อความ ไม่ใช่การวินิจฉัย",
         priority: "กลาง",
@@ -308,6 +322,11 @@ export const GUIDES: RoleGuide[] = [
         id: "UAT-LAB-01",
         title: "แยกหลอดอัตโนมัติ",
         pre: "แพทย์สั่ง TSH, FT4, CREA ใน order เดียว",
+        setup: [
+          "เข้าเป็น **สมใจ**: เปิดผู้ป่วย กด **เปิด Visit ใหม่** (ถ้ายังไม่มี Visit)",
+          "เข้าเป็น **นพ.ธนา**: **สั่ง Lab** เพิ่ม `tsh` `ft4` `crea` แล้ว **ยืนยันสั่ง Lab**",
+          "กลับเข้าเป็น **นางสาวพิมพ์**",
+        ],
         steps: ["เก็บสิ่งส่งตรวจ order นั้น"],
         expect: "ได้ 2 ฉลาก: หลอดแดง OUT-A (TSH FT4) และหลอดแดง IN-HOUSE (CREA)",
         priority: "สูง",
@@ -339,6 +358,7 @@ export const GUIDES: RoleGuide[] = [
         id: "UAT-LAB-07",
         title: "นำเข้าผล HL7",
         pre: "มีหลอดที่ส่ง OUT-A แล้ว",
+        setup: ["ทำ UAT-LAB-01 → **รับเข้า Lab** ทุกหลอด → **ส่ง Outlab** สร้างใบนำส่ง OUT-A → **ยืนยันส่ง**"],
         steps: ["หน้าลงผล กด ตัวอย่างจาก OUT-A", "กด นำเข้า"],
         expect: "แถบเขียว นำเข้า ... n ผล รายการไปอยู่ที่หน้า Verify และผลรายการแรกมีป้าย H (ตัวอย่างตั้งใจให้สูง)",
         priority: "สูง",

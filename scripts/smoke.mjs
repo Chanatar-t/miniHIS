@@ -172,6 +172,8 @@ async function main() {
   r = await post("/lab/results", lab, creaForm, { value_4: "12" });
   const crea = one("SELECT status, flag, resulted_by FROM lab_order_items WHERE id = 4");
   ok(r.loc.includes("msg=") && crea.status === "RESULTED" && crea.flag === "HH" && crea.resulted_by === 3, "manual CREA=12 -> HH critical");
+  const docView = await html("/patients/HN0000031", doc);
+  ok(docView.includes("รอ Verify") && !docView.includes("HH วิกฤต"), "UAT-DOC-05: doctor sees 'waiting for verify', not the unverified value");
   r = await post("/lab/results", lab, creaForm, { value_4: "13" }); // stale form
   ok(r.loc.includes("err=") && one("SELECT value FROM lab_order_items WHERE id = 4").value === "12", "re-submit stale result form -> error, value kept");
 

@@ -165,6 +165,18 @@ export default async function RoleGuidePage({ params, searchParams }: PageProps<
                           <span className="font-medium">เงื่อนไขก่อนเริ่ม:</span> {c.pre}
                         </p>
                       )}
+                      {c.setup && (
+                        <details className="mb-3 rounded-lg border border-sky-200 bg-sky-50">
+                          <summary className="cursor-pointer px-3 py-1.5 font-medium text-sky-800">🧰 วิธีเตรียมข้อมูล (ต้องสลับบัญชี)</summary>
+                          <ol className="list-decimal space-y-1 px-3 pb-2 pl-8 text-slate-700">
+                            {c.setup.map((s, n) => (
+                              <li key={n}>
+                                <Rich text={s} />
+                              </li>
+                            ))}
+                          </ol>
+                        </details>
+                      )}
                       <div className="font-medium text-slate-500">ขั้นตอน</div>
                       <ol className="mt-1 list-decimal space-y-1 pl-5 text-slate-700">
                         {c.steps.map((s, n) => (
